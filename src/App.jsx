@@ -13,6 +13,7 @@ const sounds = {
   lose: new Audio('/sounds/lose.mp3'),
 };
 
+// 소리 재생 헬퍼
 const playSound = (name) => {
   try {
     const audio = sounds[name];
@@ -66,6 +67,7 @@ function App() {
   const [isGameStarted, setIsGameStarted] = useState(false);
   const [previewWall, setPreviewWall] = useState(null); 
 
+  // 이전 상태 저장을 위한 Ref
   const prevStateRef = useRef(initialState);
 
   useEffect(() => {
@@ -96,37 +98,40 @@ function App() {
       socket.off('update_state');
       socket.off('init_state');
     };
-  }, [myRole]); // myRole이 변경될 때 playSound 로직이 정확히 작동하도록 의존성 추가
+  }, [myRole]);
 
   const syncWithServer = (state) => {
     if (!state) return;
 
     const prev = prevStateRef.current;
     
-    // 1. 이동 소리
+    // [사운드 로직]
+    // 1. 이동
     if (prev.p1.x !== state.p1.x || prev.p1.y !== state.p1.y || 
         prev.p2.x !== state.p2.x || prev.p2.y !== state.p2.y) {
       playSound('move');
     }
 
-    // 2. 벽 소리
+    // 2. 벽 설치
     if ((state.walls || []).length > (prev.walls || []).length) {
       playSound('wall');
     }
 
-    // 3. ★ 승패 소리 분기 (명확하게 수정됨)
+    // 3. 승패
     if (state.winner && !prev.winner) {
-      // 내가 플레이어라면
       if (myRole === 1 || myRole === 2) {
-        if (state.winner === myRole) {
-          playSound('win');  // 내가 이김 -> 승리 소리
-        } else {
-          playSound('lose'); // 내가 짐 -> 패배 소리
-        }
+        if (state.winner === myRole) playSound('win');
+        else playSound('lose');
       } else {
-        // 관전자면 그냥 승리 소리
         playSound('win');
       }
+    }
+
+    // ★ [버그 수정] 턴이 실제로 바뀌었을 때만 버튼/프리뷰 초기화
+    // (시간만 바뀐 경우에는 초기화하지 않음)
+    if (prev.turn !== state.turn) {
+      setPreviewWall(null);
+      setActionMode(null);
     }
 
     prevStateRef.current = state;
@@ -138,9 +143,6 @@ function App() {
     setWinner(state.winner);
     setP1Time(state.p1Time);
     setP2Time(state.p2Time);
-
-    setPreviewWall(null); 
-    if (state.turn === myRole) setActionMode(null);
   };
 
   const emitAction = (newState) => {
@@ -159,7 +161,7 @@ function App() {
 
   const isMyTurn = turn === myRole;
 
-  // --- 로직 함수들 ---
+  // --- 게임 로직 함수들 ---
   const isBlockedByWall = (currentX, currentY, targetX, targetY, currentWalls) => {
     if (targetY < currentY) return currentWalls.some(w => w.orientation === 'h' && w.y === targetY && (w.x === currentX || w.x === currentX - 1));
     if (targetY > currentY) return currentWalls.some(w => w.orientation === 'h' && w.y === currentY && (w.x === currentX || w.x === currentX - 1));
@@ -279,6 +281,7 @@ function App() {
     }
   };
 
+  // 스타일 헬퍼
   const getVWallStyle = (x, y) => ({ left: `calc(${x} * var(--unit) + var(--cell))`, top: `calc(${y} * var(--unit))` });
   const getHWallStyle = (x, y) => ({ left: `calc(${x} * var(--unit))`, top: `calc(${y} * var(--unit) + var(--cell))` });
   const getPlacedWallStyle = (wall) => {
@@ -289,10 +292,11 @@ function App() {
   const isSpectator = isGameStarted && myRole !== 1 && myRole !== 2;
   const isFlipped = myRole === 1; 
 
+  // 상단 시간(상대방), 하단 시간(나)
   const topTime = isFlipped ? p2Time : p1Time;
   const bottomTime = isFlipped ? p1Time : p2Time;
 
-  // ★ 승패 메시지 결정 로직
+  // 승패 메시지
   let resultMessage = "";
   if (winner) {
     if (isSpectator) {
@@ -343,17 +347,18 @@ function App() {
         </header>
 
         <main className="main-content">
+          {/* P1 패널 (백색) */}
           <aside className={`side-panel white-area ${turn === 1 && !winner ? 'active' : ''}`} style={{ order: isFlipped ? 3 : 1 }}>
             <div className="wall-counter white-box">남은 벽: <span className="count">{player1.wallCount}</span></div>
             {myRole === 1 ? (
               <div className="button-group">
                 <button className={`btn p1-btn ${actionMode==='move'?'selected':''}`} onClick={()=>setActionMode('move')} disabled={!isMyTurn||winner}>이동</button>
                 <button className={`btn p1-btn ${actionMode==='wall'?'selected':''}`} onClick={()=>setActionMode('wall')} disabled={!isMyTurn||winner}>벽</button>
-                {/* 패널 내부의 항복 버튼은 제거함 */}
               </div>
             ) : null}
           </aside>
 
+          {/* 보드 섹션 */}
           <section className="board-section" style={{ order: 2 }}>
             <div className="turn-display">
               {winner ? <span className="win-text">{resultMessage}</span> : <span className={turn===1?'t-white':'t-black'}>{turn===1?'● 백색 턴':'● 흑색 턴'}</span>}
@@ -396,7 +401,7 @@ function App() {
 
             <TimeBar time={bottomTime} />
             
-            {/* ★ 항복 버튼: 내 초읽기 바(하단) 아래 우측 정렬 */}
+            {/* 항복 버튼 (우측 정렬) */}
             {!isSpectator && !winner && isGameStarted && (
                <div className="controls-row">
                  <button className="btn-resign" onClick={resignGame}>항복 (Resign)</button>
@@ -405,6 +410,7 @@ function App() {
 
           </section>
 
+          {/* P2 패널 (흑색) */}
           <aside className={`side-panel black-area ${turn === 2 && !winner ? 'active' : ''}`} style={{ order: isFlipped ? 1 : 3 }}>
             <div className="wall-counter black-box">남은 벽: <span className="count">{player2.wallCount}</span></div>
             {myRole === 2 ? (
@@ -418,7 +424,7 @@ function App() {
         
         {isGameStarted && !isSpectator && <button className="reset-float" onClick={resetGame}>🔄</button>}
         
-        {/* ★ 승패 모달 텍스트 수정 */}
+        {/* 승패 모달 */}
         {winner && (
           <div className="overlay">
             <div className="modal">
