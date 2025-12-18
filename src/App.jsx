@@ -72,56 +72,111 @@ function App() {
 
   const isMyTurn = turn === myRole;
 
-  // --- 🔥 [핵심 로직 1] 벽에 의한 이동 차단 확인 ---
+  // --- 🔥 [핵심 1] 벽 충돌 감지 로직 (기존 유지) ---
   const isBlockedByWall = (currentX, currentY, targetX, targetY, currentWalls) => {
-    // 1. 위로 이동 (y가 줄어듦): (x, y-1)의 H벽 또는 (x-1, y-1)의 H벽 체크
+    // 1. 위로 이동 (y가 줄어듦)
     if (targetY < currentY) {
       return currentWalls.some(w => w.orientation === 'h' && w.y === targetY && (w.x === currentX || w.x === currentX - 1));
     }
-    // 2. 아래로 이동 (y가 늘어남): (x, y)의 H벽 또는 (x-1, y)의 H벽 체크
+    // 2. 아래로 이동 (y가 늘어남)
     if (targetY > currentY) {
       return currentWalls.some(w => w.orientation === 'h' && w.y === currentY && (w.x === currentX || w.x === currentX - 1));
     }
-    // 3. 왼쪽으로 이동 (x가 줄어듦): (x-1, y)의 V벽 또는 (x-1, y-1)의 V벽 체크
+    // 3. 왼쪽으로 이동 (x가 줄어듦)
     if (targetX < currentX) {
       return currentWalls.some(w => w.orientation === 'v' && w.x === targetX && (w.y === currentY || w.y === currentY - 1));
     }
-    // 4. 오른쪽으로 이동 (x가 늘어남): (x, y)의 V벽 또는 (x, y-1)의 V벽 체크
+    // 4. 오른쪽으로 이동 (x가 늘어남)
     if (targetX > currentX) {
       return currentWalls.some(w => w.orientation === 'v' && w.x === currentX && (w.y === currentY || w.y === currentY - 1));
     }
     return false;
   };
 
-  // --- 🔥 [핵심 로직 2] 길 찾기 알고리즘 (BFS) ---
-  // 벽을 설치했을 때 목표 지점까지 갈 수 있는지 확인
+  // --- 🔥 [핵심 2] 한 칸 이동 유효성 검사 (인접 + 벽 없음) ---
+  const isValidStep = (x1, y1, x2, y2, currentWalls) => {
+    // 1. 보드 범위 체크
+    if (x2 < 0 || x2 > 8 || y2 < 0 || y2 > 8) return false;
+    // 2. 정확히 상하좌우 1칸 차이인지 체크
+    if (Math.abs(x1 - x2) + Math.abs(y1 - y2) !== 1) return false;
+    // 3. 벽에 막혀있는지 체크
+    return !isBlockedByWall(x1, y1, x2, y2, currentWalls);
+  };
+
+  // --- 🔥 [핵심 3] 이동 가능한지 최종 판별 (점프 & 대각선 포함) ---
+  const isMoveable = (targetX, targetY) => {
+    if (!isGameStarted || !isMyTurn || actionMode !== 'move' || winner) return false;
+    
+    const current = turn === 1 ? player1 : player2;
+    const opponent = turn === 1 ? player2 : player1;
+    
+    // CASE 1: 일반 이동 (상대방이 없는 칸으로 1칸 이동)
+    // 조건: 인접함 + 벽 없음 + 상대방 없음
+    if (isValidStep(current.x, current.y, targetX, targetY, walls)) {
+      if (!(targetX === opponent.x && targetY === opponent.y)) {
+        return true;
+      }
+    }
+
+    // CASE 2: 상대방 뛰어넘기 (Jump) 및 대각선 이동
+    // 조건: 내 바로 옆에 상대방이 있고 + 그 사이가 벽으로 막히지 않아야 함
+    if (isValidStep(current.x, current.y, opponent.x, opponent.y, walls)) {
+      // 상대방과 나의 위치 차이 (방향)
+      const dx = opponent.x - current.x;
+      const dy = opponent.y - current.y;
+      
+      // 직선 점프 예상 지점
+      const jumpX = opponent.x + dx;
+      const jumpY = opponent.y + dy;
+
+      // 2-1. 직선 점프 (Straight Jump)
+      if (targetX === jumpX && targetY === jumpY) {
+        // 상대방과 점프 지점 사이에 벽이 없어야 함
+        return isValidStep(opponent.x, opponent.y, jumpX, jumpY, walls);
+      }
+
+      // 2-2. 대각선 이동 (Diagonal Move)
+      // 조건: 목표 지점이 상대방과 인접해야 함 (상대방의 왼쪽 or 오른쪽)
+      if (isValidStep(opponent.x, opponent.y, targetX, targetY, walls)) {
+        // 추가 조건: "직선 점프가 불가능할 때"만 대각선 허용
+        // 점프 지점이 맵 밖이거나 OR 상대방과 점프 지점 사이가 벽으로 막혀있을 때
+        const isJumpBlocked = 
+          jumpX < 0 || jumpX > 8 || jumpY < 0 || jumpY > 8 || // 맵 끝
+          isBlockedByWall(opponent.x, opponent.y, jumpX, jumpY, walls); // 벽 막힘
+
+        if (isJumpBlocked) {
+          // 대각선 위치 확인 (나와 대각선 위치인지)
+          if (Math.abs(targetX - current.x) === 1 && Math.abs(targetY - current.y) === 1) {
+            return true;
+          }
+        }
+      }
+    }
+
+    return false;
+  };
+
+  // --- 🔥 [핵심 4] 길 찾기 알고리즘 (BFS) ---
   const hasValidPath = (startNode, targetRow, simulatedWalls) => {
-    const queue = [startNode]; // {x, y}
+    const queue = [startNode]; 
     const visited = new Set();
     visited.add(`${startNode.x},${startNode.y}`);
 
     const directions = [
-      { dx: 0, dy: -1 }, // 상
-      { dx: 0, dy: 1 },  // 하
-      { dx: -1, dy: 0 }, // 좌
-      { dx: 1, dy: 0 }   // 우
+      { dx: 0, dy: -1 }, { dx: 0, dy: 1 }, { dx: -1, dy: 0 }, { dx: 1, dy: 0 }
     ];
 
     while (queue.length > 0) {
       const { x, y } = queue.shift();
-
-      // 목표 지점(행)에 도달했으면 성공
       if (y === targetRow) return true;
 
       for (let dir of directions) {
         const nx = x + dir.dx;
         const ny = y + dir.dy;
 
-        // 보드 범위 체크
         if (nx >= 0 && nx < 9 && ny >= 0 && ny < 9) {
           const key = `${nx},${ny}`;
           if (!visited.has(key)) {
-            // 벽에 막혀있지 않아야 이동 가능
             if (!isBlockedByWall(x, y, nx, ny, simulatedWalls)) {
               visited.add(key);
               queue.push({ x: nx, y: ny });
@@ -130,41 +185,19 @@ function App() {
         }
       }
     }
-    return false; // 큐가 빌 때까지 목표에 못 가면 길이 막힌 것
-  };
-
-  const isMoveable = (targetX, targetY) => {
-    if (!isGameStarted || !isMyTurn || actionMode !== 'move' || winner) return false;
-    
-    const current = turn === 1 ? player1 : player2;
-    const opponent = turn === 1 ? player2 : player1;
-    
-    // 1. 인접성 체크 (상하좌우 1칸)
-    const diffX = Math.abs(current.x - targetX);
-    const diffY = Math.abs(current.y - targetY);
-    const isAdjacent = (diffX === 1 && diffY === 0) || (diffX === 0 && diffY === 1);
-    
-    // 2. 상대방이 있는지 체크 (간단한 버전: 상대방 있으면 못감. 정석 룰은 점프 가능하나 일단 기본만)
-    const isOccupied = targetX === opponent.x && targetY === opponent.y;
-
-    // 3. 벽 체크 (새로 추가된 로직)
-    const isBlocked = isBlockedByWall(current.x, current.y, targetX, targetY, walls);
-
-    return isAdjacent && !isOccupied && !isBlocked;
+    return false; 
   };
 
   const canPlaceWall = (x, y, orientation) => {
     if (!isGameStarted || !isMyTurn || winner) return false;
     
-    // 1. 벽 겹침/교차 체크
+    // 1. 벽 겹침 체크
     const isOverlap = walls.some(w => {
-      if (w.x === x && w.y === y && w.orientation === orientation) return true; // 완전 겹침
+      if (w.x === x && w.y === y && w.orientation === orientation) return true;
       if (w.orientation === orientation) {
-         // 같은 방향일 때 일자로 겹침 (길이가 2칸이므로)
         if (orientation === 'h' && w.y === y && Math.abs(w.x - x) === 1) return true;
         if (orientation === 'v' && w.x === x && Math.abs(w.y - y) === 1) return true;
       }
-      // 교차 (+) 형태 체크
       if (w.x === x && w.y === y && w.orientation !== orientation) return true;
       return false;
     });
@@ -172,15 +205,10 @@ function App() {
     if (isOverlap) return false;
 
     // 2. 길 막힘 체크 (Pathfinding)
-    // 가상의 벽 목록 생성
     const simulatedWalls = [...walls, { x, y, orientation }];
-    
-    // P1이 Row 8(맨 아래)에 갈 수 있는가?
     const p1Path = hasValidPath({ x: player1.x, y: player1.y }, 8, simulatedWalls);
-    // P2가 Row 0(맨 위)에 갈 수 있는가?
     const p2Path = hasValidPath({ x: player2.x, y: player2.y }, 0, simulatedWalls);
 
-    // 둘 다 갈 수 있어야 설치 가능
     return p1Path && p2Path;
   };
 
@@ -205,14 +233,11 @@ function App() {
     const current = turn === 1 ? player1 : player2;
     if (current.wallCount <= 0) return;
     
-    // 여기서 유효성 체크 (길막힘 포함)
     if (!canPlaceWall(x, y, orientation)) {
-        // 불가능하면 프리뷰도 해제하고 리턴
         setPreviewWall(null);
         return; 
     }
 
-    // 모바일 터치 2번 로직
     if (previewWall && previewWall.x === x && previewWall.y === y && previewWall.orientation === orientation) {
       const nextWalls = [...walls, { x, y, orientation }];
       let nextState = { 
@@ -311,6 +336,7 @@ function App() {
             </div>
             <div className="board-container">
               <div className="board">
+                {/*  */}
                 {Array.from({length:81}).map((_,i)=>{
                   const x=i%9, y=Math.floor(i/9);
                   const canMove=isMoveable(x,y);
