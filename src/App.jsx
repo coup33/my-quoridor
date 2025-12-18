@@ -26,6 +26,9 @@ function App() {
   const [readyStatus, setReadyStatus] = useState({ 1: false, 2: false });
   const [isGameStarted, setIsGameStarted] = useState(false);
 
+  // ★ 벽 설치 2단계 (미리보기) 상태 추가
+  const [previewWall, setPreviewWall] = useState(null); // {x, y, orientation}
+
   useEffect(() => {
     socket.emit('request_lobby');
     socket.on('lobby_update', (data) => {
@@ -55,6 +58,7 @@ function App() {
     setTurn(state.turn);
     setWalls(state.walls || []);
     setWinner(state.winner);
+    setPreviewWall(null); // 상태 동기화 시 프리뷰 해제
     if (state.turn === myRole) setActionMode(null);
   };
 
@@ -94,6 +98,7 @@ function App() {
   };
 
   const handleCellClick = (x, y) => {
+    setPreviewWall(null); // 이동하면 벽 프리뷰 취소
     if (!isMyTurn) return;
     if (!isMoveable(x, y)) return;
     let nextState = { p1: player1, p2: player2, turn: turn === 1 ? 2 : 1, walls, winner: null };
@@ -107,24 +112,33 @@ function App() {
     emitAction(nextState);
   };
 
+  // ★ 수정: 터치 2번 해야 설치되는 로직 적용
   const handleWallClick = (x, y, orientation) => {
     if (!isMyTurn || actionMode !== 'wall') return;
     const current = turn === 1 ? player1 : player2;
     if (current.wallCount <= 0) return;
     if (!canPlaceWall(x, y, orientation)) return;
-    const nextWalls = [...walls, { x, y, orientation }];
-    let nextState = { 
-      p1: turn === 1 ? { ...player1, wallCount: player1.wallCount - 1 } : player1,
-      p2: turn === 2 ? { ...player2, wallCount: player2.wallCount - 1 } : player2,
-      turn: turn === 1 ? 2 : 1,
-      walls: nextWalls,
-      winner: null
-    };
-    emitAction(nextState);
+
+    // 1. 이미 같은 곳을 미리보기(Preview) 중이라면 -> 설치 확정!
+    if (previewWall && previewWall.x === x && previewWall.y === y && previewWall.orientation === orientation) {
+      const nextWalls = [...walls, { x, y, orientation }];
+      let nextState = { 
+        p1: turn === 1 ? { ...player1, wallCount: player1.wallCount - 1 } : player1,
+        p2: turn === 2 ? { ...player2, wallCount: player2.wallCount - 1 } : player2,
+        turn: turn === 1 ? 2 : 1,
+        walls: nextWalls,
+        winner: null
+      };
+      emitAction(nextState);
+      setPreviewWall(null); // 설치 후 프리뷰 삭제
+    } 
+    // 2. 아니면 -> 미리보기 상태로 변경 (화면에 흐릿하게 표시)
+    else {
+      setPreviewWall({ x, y, orientation });
+    }
   };
 
-  // --- 중요: 모바일 반응형을 위한 위치 계산 스타일 헬퍼 ---
-  // calc(x * (cell + gap)) 방식을 사용하여 CSS 변수에 따라 자동 조절됨
+  // 스타일 헬퍼
   const getVWallStyle = (x, y) => ({
     left: `calc(${x} * var(--unit) + var(--cell))`,
     top: `calc(${y} * var(--unit))`
@@ -149,12 +163,18 @@ function App() {
     }
   };
 
+  // 관전자인지 확인
+  const isSpectator = isGameStarted && myRole !== 1 && myRole !== 2;
+
   return (
     <div className="container">
+      {/* 타이틀을 최상단으로 빼서 CSS 제어 */}
+      <div className="game-title">QUORIDOR</div>
+
       {!isGameStarted && (
         <div className="lobby-overlay">
           <div className="lobby-card">
-            <h2 className="lobby-title">QUORIDOR</h2>
+            <h2 style={{marginBottom: '20px'}}>QUORIDOR ONLINE</h2>
             {!myRole && (
               <div className="role-selection">
                 <div className="role-buttons">
@@ -183,20 +203,25 @@ function App() {
 
       <div className={`game-wrapper ${!isGameStarted ? 'blurred' : ''}`}>
         <header className="header">
-          <h1 className="game-title">QUORIDOR</h1>
-          <div className="role-badge">{myRole===1 ? "P1(백)" : myRole===2 ? "P2(흑)" : "관전"}</div>
+          {/* 관전자일 때만 표시 */}
+          {isSpectator && <div className="spectator-badge">관전 모드</div>}
         </header>
 
         <main className="main-content">
+          {/* [모바일 배치 핵심]
+            white-area: order 1 (상단)
+            board-section: order 2 (중간)
+            black-area: order 3 (하단)
+          */}
           <aside className={`side-panel white-area ${turn === 1 && !winner ? 'active' : ''}`}>
-            <div className="player-label">P1 (백색)</div>
+            {/* P1 텍스트 제거 */}
             <div className="wall-counter white-box">남은 벽: <span className="count">{player1.wallCount}</span></div>
             {myRole === 1 ? (
               <div className="button-group">
                 <button className={`btn p1-btn ${actionMode==='move'?'selected':''}`} onClick={()=>setActionMode('move')} disabled={!isMyTurn||winner}>이동</button>
                 <button className={`btn p1-btn ${actionMode==='wall'?'selected':''}`} onClick={()=>setActionMode('wall')} disabled={!isMyTurn||winner}>벽</button>
               </div>
-            ) : <div className="opponent-status">상대방</div>}
+            ) : null}
           </aside>
 
           <section className="board-section">
@@ -205,6 +230,7 @@ function App() {
             </div>
             <div className="board-container">
               <div className="board">
+                {/* 1. 말 이동 칸 */}
                 {Array.from({length:81}).map((_,i)=>{
                   const x=i%9, y=Math.floor(i/9);
                   const canMove=isMoveable(x,y);
@@ -216,18 +242,33 @@ function App() {
                     </div>
                   );
                 })}
+                {/* 2. 벽 설치 슬롯 */}
                 {Array.from({length:64}).map((_,i)=>{
                   const x=i%8, y=Math.floor(i/8);
                   const isWallMode=actionMode==='wall'&&isMyTurn;
                   const canH=isWallMode&&canPlaceWall(x,y,'h');
                   const canV=isWallMode&&canPlaceWall(x,y,'v');
+                  
+                  // 프리뷰(첫번째 터치) 상태인지 확인
+                  const isPreviewH = previewWall && previewWall.x===x && previewWall.y===y && previewWall.orientation==='h';
+                  const isPreviewV = previewWall && previewWall.x===x && previewWall.y===y && previewWall.orientation==='v';
+
                   return (
                     <React.Fragment key={`wp-${x}-${y}`}>
-                      <div className={`wall-target h ${isWallMode?'in-wall-mode':''} ${canH?'placeable':''}`} style={getHWallStyle(x,y)} onClick={()=>handleWallClick(x,y,'h')}/>
-                      <div className={`wall-target v ${isWallMode?'in-wall-mode':''} ${canV?'placeable':''}`} style={getVWallStyle(x,y)} onClick={()=>handleWallClick(x,y,'v')}/>
+                      <div 
+                        className={`wall-target h ${isWallMode?'in-wall-mode':''} ${canH?'placeable':''} ${isPreviewH?'preview':''}`} 
+                        style={getHWallStyle(x,y)} 
+                        onClick={()=>handleWallClick(x,y,'h')}
+                      />
+                      <div 
+                        className={`wall-target v ${isWallMode?'in-wall-mode':''} ${canV?'placeable':''} ${isPreviewV?'preview':''}`} 
+                        style={getVWallStyle(x,y)} 
+                        onClick={()=>handleWallClick(x,y,'v')}
+                      />
                     </React.Fragment>
                   );
                 })}
+                {/* 3. 실제 설치된 벽 */}
                 {(walls || []).map((wall,i)=>(
                   <div key={i} className={`placed-wall ${wall.orientation}`} style={getPlacedWallStyle(wall)}/>
                 ))}
@@ -236,17 +277,18 @@ function App() {
           </section>
 
           <aside className={`side-panel black-area ${turn === 2 && !winner ? 'active' : ''}`}>
-            <div className="player-label">P2 (흑색)</div>
+             {/* P2 텍스트 제거 */}
             <div className="wall-counter black-box">남은 벽: <span className="count">{player2.wallCount}</span></div>
             {myRole === 2 ? (
               <div className="button-group">
                 <button className={`btn p2-btn ${actionMode==='move'?'selected':''}`} onClick={()=>setActionMode('move')} disabled={!isMyTurn||winner}>이동</button>
                 <button className={`btn p2-btn ${actionMode==='wall'?'selected':''}`} onClick={()=>setActionMode('wall')} disabled={!isMyTurn||winner}>벽</button>
               </div>
-            ) : <div className="opponent-status">상대방</div>}
+            ) : null}
           </aside>
         </main>
-        {isGameStarted && <button className="reset-float" onClick={resetGame}>🔄</button>}
+        
+        {isGameStarted && !isSpectator && <button className="reset-float" onClick={resetGame}>🔄</button>}
         {winner && <div className="overlay"><div className="modal"><h2>{winner===1?'백색':'흑색'} 승리!</h2><button className="reset-large" onClick={resetGame}>로비로</button></div></div>}
       </div>
     </div>
