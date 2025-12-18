@@ -4,7 +4,6 @@ import './App.css';
 
 const socket = io('https://my-quoridor.onrender.com');
 
-// 오디오 객체 생성
 const sounds = {
   move: new Audio('/sounds/move.mp3'),
   wall: new Audio('/sounds/wall.mp3'),
@@ -13,7 +12,6 @@ const sounds = {
   lose: new Audio('/sounds/lose.mp3'),
 };
 
-// 소리 재생 헬퍼
 const playSound = (name) => {
   try {
     const audio = sounds[name];
@@ -26,7 +24,6 @@ const playSound = (name) => {
   }
 };
 
-// 타임 바 컴포넌트
 const TimeBar = ({ time, maxTime = 90 }) => {
   const percentage = Math.min(100, Math.max(0, (time / maxTime) * 100));
   let statusClass = '';
@@ -49,7 +46,10 @@ function App() {
     walls: [],
     winner: null,
     p1Time: 60,
-    p2Time: 60
+    p2Time: 60,
+    // ★ 추가된 상태
+    lastMove: null, // { player: 1, x: 4, y: 0 }
+    lastWall: null  // { x, y, orientation }
   };
 
   const [player1, setPlayer1] = useState(initialState.p1);
@@ -60,6 +60,10 @@ function App() {
   const [p1Time, setP1Time] = useState(initialState.p1Time);
   const [p2Time, setP2Time] = useState(initialState.p2Time);
   
+  // ★ 시각적 효과를 위한 state 추가
+  const [lastMove, setLastMove] = useState(null);
+  const [lastWall, setLastWall] = useState(null);
+  
   const [actionMode, setActionMode] = useState(null);
   const [myRole, setMyRole] = useState(null);
   const [takenRoles, setTakenRoles] = useState({ 1: null, 2: null });
@@ -67,7 +71,6 @@ function App() {
   const [isGameStarted, setIsGameStarted] = useState(false);
   const [previewWall, setPreviewWall] = useState(null); 
 
-  // 이전 상태 저장을 위한 Ref
   const prevStateRef = useRef(initialState);
 
   useEffect(() => {
@@ -86,6 +89,9 @@ function App() {
       if (started) {
         playSound('start');
         prevStateRef.current = JSON.parse(JSON.stringify(initialState));
+        // 게임 시작 시 잔상 초기화
+        setLastMove(null);
+        setLastWall(null);
       }
     });
 
@@ -106,18 +112,15 @@ function App() {
     const prev = prevStateRef.current;
     
     // [사운드 로직]
-    // 1. 이동
     if (prev.p1.x !== state.p1.x || prev.p1.y !== state.p1.y || 
         prev.p2.x !== state.p2.x || prev.p2.y !== state.p2.y) {
       playSound('move');
     }
 
-    // 2. 벽 설치
     if ((state.walls || []).length > (prev.walls || []).length) {
       playSound('wall');
     }
 
-    // 3. 승패
     if (state.winner && !prev.winner) {
       if (myRole === 1 || myRole === 2) {
         if (state.winner === myRole) playSound('win');
@@ -127,8 +130,7 @@ function App() {
       }
     }
 
-    // ★ [버그 수정] 턴이 실제로 바뀌었을 때만 버튼/프리뷰 초기화
-    // (시간만 바뀐 경우에는 초기화하지 않음)
+    // 턴 변경 시 UI 초기화
     if (prev.turn !== state.turn) {
       setPreviewWall(null);
       setActionMode(null);
@@ -143,6 +145,10 @@ function App() {
     setWinner(state.winner);
     setP1Time(state.p1Time);
     setP2Time(state.p2Time);
+    
+    // ★ 잔상 및 벽 하이라이트 정보 동기화
+    setLastMove(state.lastMove);
+    setLastWall(state.lastWall);
   };
 
   const emitAction = (newState) => {
@@ -161,7 +167,7 @@ function App() {
 
   const isMyTurn = turn === myRole;
 
-  // --- 게임 로직 함수들 ---
+  // --- 로직 함수들 ---
   const isBlockedByWall = (currentX, currentY, targetX, targetY, currentWalls) => {
     if (targetY < currentY) return currentWalls.some(w => w.orientation === 'h' && w.y === targetY && (w.x === currentX || w.x === currentX - 1));
     if (targetY > currentY) return currentWalls.some(w => w.orientation === 'h' && w.y === currentY && (w.x === currentX || w.x === currentX - 1));
@@ -281,7 +287,6 @@ function App() {
     }
   };
 
-  // 스타일 헬퍼
   const getVWallStyle = (x, y) => ({ left: `calc(${x} * var(--unit) + var(--cell))`, top: `calc(${y} * var(--unit))` });
   const getHWallStyle = (x, y) => ({ left: `calc(${x} * var(--unit))`, top: `calc(${y} * var(--unit) + var(--cell))` });
   const getPlacedWallStyle = (wall) => {
@@ -292,11 +297,9 @@ function App() {
   const isSpectator = isGameStarted && myRole !== 1 && myRole !== 2;
   const isFlipped = myRole === 1; 
 
-  // 상단 시간(상대방), 하단 시간(나)
   const topTime = isFlipped ? p2Time : p1Time;
   const bottomTime = isFlipped ? p1Time : p2Time;
 
-  // 승패 메시지
   let resultMessage = "";
   if (winner) {
     if (isSpectator) {
@@ -347,7 +350,6 @@ function App() {
         </header>
 
         <main className="main-content">
-          {/* P1 패널 (백색) */}
           <aside className={`side-panel white-area ${turn === 1 && !winner ? 'active' : ''}`} style={{ order: isFlipped ? 3 : 1 }}>
             <div className="wall-counter white-box">남은 벽: <span className="count">{player1.wallCount}</span></div>
             {myRole === 1 ? (
@@ -358,7 +360,6 @@ function App() {
             ) : null}
           </aside>
 
-          {/* 보드 섹션 */}
           <section className="board-section" style={{ order: 2 }}>
             <div className="turn-display">
               {winner ? <span className="win-text">{resultMessage}</span> : <span className={turn===1?'t-white':'t-black'}>{turn===1?'● 백색 턴':'● 흑색 턴'}</span>}
@@ -371,10 +372,21 @@ function App() {
                 {Array.from({length:81}).map((_,i)=>{
                   const x=i%9, y=Math.floor(i/9);
                   const canMove=isMoveable(x,y);
+                  
+                  // ★ 잔상(Ghost) 렌더링 로직
+                  const isGhostP1 = lastMove && lastMove.player === 1 && lastMove.x === x && lastMove.y === y;
+                  const isGhostP2 = lastMove && lastMove.player === 2 && lastMove.x === x && lastMove.y === y;
+
                   return (
                     <div key={`c-${x}-${y}`} className={`cell ${canMove?'highlight':''}`} onClick={()=>handleCellClick(x,y)}>
+                      {/* 실제 말 */}
                       {player1.x===x&&player1.y===y&&<div className="pawn white-pawn"/>}
                       {player2.x===x&&player2.y===y&&<div className="pawn black-pawn"/>}
+                      
+                      {/* 잔상 말 (Ghost) */}
+                      {isGhostP1 && <div className="ghost-pawn ghost-white"/>}
+                      {isGhostP2 && <div className="ghost-pawn ghost-black"/>}
+                      
                       {canMove&&<div className="move-dot"/>}
                     </div>
                   );
@@ -386,6 +398,7 @@ function App() {
                   const canV=isWallMode&&canPlaceWall(x,y,'v');
                   const isPreviewH = previewWall && previewWall.x===x && previewWall.y===y && previewWall.orientation==='h';
                   const isPreviewV = previewWall && previewWall.x===x && previewWall.y===y && previewWall.orientation==='v';
+
                   return (
                     <React.Fragment key={`wp-${x}-${y}`}>
                       <div className={`wall-target h ${isWallMode?'in-wall-mode':''} ${canH?'placeable':''} ${isPreviewH?'preview':''}`} style={getHWallStyle(x,y)} onClick={()=>handleWallClick(x,y,'h')}/>
@@ -393,15 +406,18 @@ function App() {
                     </React.Fragment>
                   );
                 })}
-                {(walls || []).map((wall,i)=>(
-                  <div key={i} className={`placed-wall ${wall.orientation}`} style={getPlacedWallStyle(wall)}/>
-                ))}
+                {(walls || []).map((wall,i)=>{
+                  // ★ 최신 벽 하이라이트 확인
+                  const isLatest = lastWall && lastWall.x === wall.x && lastWall.y === wall.y && lastWall.orientation === wall.orientation;
+                  return (
+                    <div key={i} className={`placed-wall ${wall.orientation} ${isLatest?'latest':''}`} style={getPlacedWallStyle(wall)}/>
+                  );
+                })}
               </div>
             </div>
 
             <TimeBar time={bottomTime} />
             
-            {/* 항복 버튼 (우측 정렬) */}
             {!isSpectator && !winner && isGameStarted && (
                <div className="controls-row">
                  <button className="btn-resign" onClick={resignGame}>항복 (Resign)</button>
@@ -410,7 +426,6 @@ function App() {
 
           </section>
 
-          {/* P2 패널 (흑색) */}
           <aside className={`side-panel black-area ${turn === 2 && !winner ? 'active' : ''}`} style={{ order: isFlipped ? 1 : 3 }}>
             <div className="wall-counter black-box">남은 벽: <span className="count">{player2.wallCount}</span></div>
             {myRole === 2 ? (
@@ -424,7 +439,6 @@ function App() {
         
         {isGameStarted && !isSpectator && <button className="reset-float" onClick={resetGame}>🔄</button>}
         
-        {/* 승패 모달 */}
         {winner && (
           <div className="overlay">
             <div className="modal">

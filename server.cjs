@@ -14,10 +14,9 @@ const io = new Server(server, {
   }
 });
 
-// ★ [수정] 시간 규칙 변경
-const MAX_TIME = 90;  // 최대 90초
-const START_TIME = 60; // 시작 60초
-const INCREMENT = 6;   // 1수당 6초 추가
+const MAX_TIME = 90; 
+const START_TIME = 60;
+const INCREMENT = 6;  
 
 const INITIAL_GAME_STATE = {
   p1: { x: 4, y: 0, wallCount: 10 },
@@ -26,7 +25,10 @@ const INITIAL_GAME_STATE = {
   walls: [],
   winner: null,
   p1Time: START_TIME,
-  p2Time: START_TIME
+  p2Time: START_TIME,
+  // ★ [추가] 마지막 행동 기록용 상태
+  lastMove: null, // { player: 1, x: 4, y: 0 } (말이 이동해온 '이전 위치')
+  lastWall: null  // { x, y, orientation } (방금 설치된 벽)
 };
 
 let gameState = JSON.parse(JSON.stringify(INITIAL_GAME_STATE));
@@ -52,7 +54,7 @@ const startGameTimer = () => {
       gameState.p1Time -= 1;
       if (gameState.p1Time <= 0) {
         gameState.p1Time = 0;
-        gameState.winner = 2; // P1 시간패 -> P2 승리
+        gameState.winner = 2; 
         io.emit('update_state', gameState);
         clearInterval(gameInterval);
       }
@@ -60,7 +62,7 @@ const startGameTimer = () => {
       gameState.p2Time -= 1;
       if (gameState.p2Time <= 0) {
         gameState.p2Time = 0;
-        gameState.winner = 1; // P2 시간패 -> P1 승리
+        gameState.winner = 1; 
         io.emit('update_state', gameState);
         clearInterval(gameInterval);
       }
@@ -111,14 +113,42 @@ io.on('connection', (socket) => {
     if (roles[1] !== socket.id && roles[2] !== socket.id) return;
     if (gameState.winner) return;
 
+    // ★ [핵심] 상태 비교를 통해 마지막 행동(Last Action) 추적
+    let newLastMove = gameState.lastMove; // 기존 값 유지 (턴이 바뀌어도 잔상 유지하고 싶으면)
+    let newLastWall = null; // 벽은 방금 둔 것만 하이라이트
+
+    // 1. P1 이동 감지
+    if (gameState.p1.x !== newState.p1.x || gameState.p1.y !== newState.p1.y) {
+       newLastMove = { player: 1, x: gameState.p1.x, y: gameState.p1.y }; // '이전' 위치 저장
+       newLastWall = null; // 벽 하이라이트 제거
+    }
+    // 2. P2 이동 감지
+    else if (gameState.p2.x !== newState.p2.x || gameState.p2.y !== newState.p2.y) {
+       newLastMove = { player: 2, x: gameState.p2.x, y: gameState.p2.y }; // '이전' 위치 저장
+       newLastWall = null;
+    }
+    // 3. 벽 설치 감지
+    else if ((newState.walls || []).length > (gameState.walls || []).length) {
+       // 새로 추가된 벽이 무엇인지 찾음 (배열의 마지막 요소라고 가정)
+       const walls = newState.walls || [];
+       if (walls.length > 0) {
+           newLastWall = walls[walls.length - 1];
+       }
+       // 벽을 뒀을 때는 잔상을 지울지 말지 결정 (여기선 잔상 유지, 벽만 하이라이트)
+    }
+
     const previousTurn = gameState.turn;
     
+    // 상태 업데이트 (+ 마지막 행동 정보 포함)
     gameState = {
         ...newState,
         p1Time: gameState.p1Time, 
-        p2Time: gameState.p2Time
+        p2Time: gameState.p2Time,
+        lastMove: newLastMove, // 추가됨
+        lastWall: newLastWall  // 추가됨
     };
 
+    // 시간 추가
     if (previousTurn === 1) {
         gameState.p1Time = Math.min(MAX_TIME, gameState.p1Time + INCREMENT);
     } else {
@@ -128,15 +158,13 @@ io.on('connection', (socket) => {
     io.emit('update_state', gameState);
   });
 
-  // ★ [추가] 기권(항복) 처리
   socket.on('resign_game', () => {
-    // 플레이어인지 확인
     let resignPlayer = null;
     if (roles[1] === socket.id) resignPlayer = 1;
     else if (roles[2] === socket.id) resignPlayer = 2;
 
     if (resignPlayer && isGameStarted && !gameState.winner) {
-        gameState.winner = resignPlayer === 1 ? 2 : 1; // 내가 1이면 2승, 2면 1승
+        gameState.winner = resignPlayer === 1 ? 2 : 1;
         if (gameInterval) clearInterval(gameInterval);
         io.emit('update_state', gameState);
     }

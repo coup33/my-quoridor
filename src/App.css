@@ -376,6 +376,44 @@ body {
   cursor: not-allowed;
 }
 
+/* --- 👻 과거 이동 잔상 (Ghost Pawn) --- */
+.ghost-pawn {
+  width: var(--pawn);
+  height: var(--pawn);
+  border-radius: 50%;
+  position: absolute;
+  z-index: 4; /* 실제 말(z-index:5)보다 뒤에 */
+  opacity: 0.4; /* 흐릿하게 */
+  pointer-events: none; /* 클릭 방지 */
+  transform: scale(0.8); /* 실제 말보다 약간 작게 */
+  box-shadow: none;
+}
+
+.ghost-white {
+  background: #f8f9fa;
+  border: 2px dashed #adb5bd; /* 점선 테두리 */
+}
+
+.ghost-black {
+  background: #212529;
+  border: 2px dashed #868e96;
+}
+
+/* --- ✨ 최신 설치된 벽 하이라이트 --- */
+.placed-wall.latest {
+  background: #ffec99 !important; /* 밝은 노란색/연한 주황색으로 강조 */
+  box-shadow: 0 0 10px #fcc419, 0 2px 4px rgba(0,0,0,0.5); /* 네온 효과 */
+  animation: wallPulse 2s infinite; /* 깜빡임 효과 */
+  z-index: 25; /* 다른 벽보다 위에 */
+}
+
+@keyframes wallPulse {
+  0% { box-shadow: 0 0 5px #fcc419; }
+  50% { box-shadow: 0 0 15px #fcc419; }
+  100% { box-shadow: 0 0 5px #fcc419; }
+}
+
+
 .start-btn { width: 100%; padding: 15px; background: #27ae60; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; }
 .cancel-btn { width: 100%; margin-top: 10px; padding: 10px; background: #868e96; color: white; border: none; border-radius: 8px; cursor: pointer; }
 
