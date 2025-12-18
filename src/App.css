@@ -1,3 +1,5 @@
+/* App.css - Quoridor Web Game Style */
+
 * {
   box-sizing: border-box;
   margin: 0;
@@ -146,26 +148,11 @@ body {
 .btn.selected { background: #fcc419; color: black; }
 .btn:disabled { opacity: 0.3; cursor: not-allowed; }
 
-/* 🏳️ 항복 버튼 */
-.btn-resign {
-  margin-top: 10px;
-  background-color: #c92a2a; /* 붉은색 */
-  color: white;
-  border: none;
-  font-size: 0.9rem;
-  opacity: 0.8;
-}
-.btn-resign:hover {
-  background-color: #e03131;
-  opacity: 1;
-}
-
 /* 보드판 섹션 */
 .board-section {
   display: flex;
   flex-direction: column;
   align-items: center;
-  /* 타임 바가 추가되었으므로 전체 너비 확보 */
   width: auto;
 }
 
@@ -178,11 +165,12 @@ body {
 .t-white { color: #ced4da; }
 .t-black { color: #868e96; }
 
-/* --- ⏱️ 초읽기 타임 바 스타일 (두껍게 수정됨) --- */
+/* --- ⏱️ 초읽기 타임 바 스타일 --- */
 .time-bar-wrapper {
   width: 95%;
   max-width: 480px;
-  height: 24px; /* 높이 3배 증가 */
+  /* 두껍게 (3배) */
+  height: 24px; 
   background-color: #343a40;
   border-radius: 12px;
   overflow: hidden;
@@ -205,13 +193,47 @@ body {
   position: absolute;
   width: 100%;
   text-align: center;
-  top: 50%; /* 세로 중앙 정렬 */
+  /* 정중앙 정렬 */
+  top: 50%;
   transform: translateY(-50%);
-  font-size: 14px; /* 폰트 크기 증가 */
+  font-size: 13px;
   font-weight: bold;
   color: #fff;
   text-shadow: 0 1px 3px rgba(0,0,0,0.8);
   z-index: 2;
+}
+
+/* --- 항복 버튼 영역 (보드 하단 우측 정렬) --- */
+.controls-row {
+  width: 95%;
+  max-width: 480px;
+  display: flex;
+  justify-content: flex-end; /* 우측 정렬 */
+  margin-top: 5px;
+}
+
+.btn-resign {
+  padding: 6px 12px;
+  background-color: #343a40;
+  color: #fa5252;
+  border: 1px solid #fa5252;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-resign:hover {
+  background-color: #fa5252;
+  color: white;
+}
+
+.btn-resign:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+  border-color: #868e96;
+  color: #868e96;
 }
 
 /* 보드 컨테이너 */
@@ -311,7 +333,6 @@ body {
   
   .button-group { flex-direction: row; gap: 5px; }
   .btn { padding: 5px 10px; font-size: 0.8rem; height: 34px;}
-  .btn-resign { margin-top: 0; height: 34px; padding: 5px 10px; }
 
   /* 헤더 숨김 */
   .header { display: none; }

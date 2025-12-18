@@ -4,7 +4,7 @@ import './App.css';
 
 const socket = io('https://my-quoridor.onrender.com');
 
-// ★ [사운드] 오디오 객체 미리 생성 (성능 최적화)
+// 오디오 객체 생성
 const sounds = {
   move: new Audio('/sounds/move.mp3'),
   wall: new Audio('/sounds/wall.mp3'),
@@ -13,19 +13,19 @@ const sounds = {
   lose: new Audio('/sounds/lose.mp3'),
 };
 
-// 소리 재생 헬퍼 함수
 const playSound = (name) => {
   try {
     const audio = sounds[name];
     if (audio) {
-      audio.currentTime = 0; // 연속 재생을 위해 재생 위치 초기화
-      audio.play().catch(e => console.log("Audio play failed:", e)); // 브라우저 정책 예외 처리
+      audio.currentTime = 0;
+      audio.play().catch(e => console.log("Audio play failed:", e));
     }
   } catch (err) {
     console.error(err);
   }
 };
 
+// 타임 바 컴포넌트
 const TimeBar = ({ time, maxTime = 90 }) => {
   const percentage = Math.min(100, Math.max(0, (time / maxTime) * 100));
   let statusClass = '';
@@ -66,7 +66,6 @@ function App() {
   const [isGameStarted, setIsGameStarted] = useState(false);
   const [previewWall, setPreviewWall] = useState(null); 
 
-  // ★ [사운드] 이전 게임 상태를 기억하기 위한 Ref
   const prevStateRef = useRef(initialState);
 
   useEffect(() => {
@@ -83,8 +82,7 @@ function App() {
     socket.on('game_start', (started) => {
       setIsGameStarted(started);
       if (started) {
-        playSound('start'); // 게임 시작 소리
-        // 시작 시 이전 상태 초기화
+        playSound('start');
         prevStateRef.current = JSON.parse(JSON.stringify(initialState));
       }
     });
@@ -98,41 +96,41 @@ function App() {
       socket.off('update_state');
       socket.off('init_state');
     };
-  }, []);
+  }, [myRole]); // myRole이 변경될 때 playSound 로직이 정확히 작동하도록 의존성 추가
 
   const syncWithServer = (state) => {
     if (!state) return;
 
-    // ★ [사운드 로직] 상태 변화 감지하여 소리 재생
     const prev = prevStateRef.current;
     
-    // 1. 말이 이동했는지 체크 (P1 or P2 좌표 변경)
+    // 1. 이동 소리
     if (prev.p1.x !== state.p1.x || prev.p1.y !== state.p1.y || 
         prev.p2.x !== state.p2.x || prev.p2.y !== state.p2.y) {
       playSound('move');
     }
 
-    // 2. 벽이 설치되었는지 체크 (벽 개수 증가)
+    // 2. 벽 소리
     if ((state.walls || []).length > (prev.walls || []).length) {
       playSound('wall');
     }
 
-    // 3. 승리/패배 체크 (승자가 새로 생겼을 때)
+    // 3. ★ 승패 소리 분기 (명확하게 수정됨)
     if (state.winner && !prev.winner) {
-      // 내가 관전자가 아닐 때만 승패 소리 재생
+      // 내가 플레이어라면
       if (myRole === 1 || myRole === 2) {
-        if (state.winner === myRole) playSound('win');
-        else playSound('lose');
+        if (state.winner === myRole) {
+          playSound('win');  // 내가 이김 -> 승리 소리
+        } else {
+          playSound('lose'); // 내가 짐 -> 패배 소리
+        }
       } else {
         // 관전자면 그냥 승리 소리
         playSound('win');
       }
     }
 
-    // 현재 상태를 Ref에 저장 (다음 비교를 위해)
     prevStateRef.current = state;
 
-    // 상태 업데이트
     setPlayer1(state.p1);
     setPlayer2(state.p2);
     setTurn(state.turn);
@@ -294,6 +292,17 @@ function App() {
   const topTime = isFlipped ? p2Time : p1Time;
   const bottomTime = isFlipped ? p1Time : p2Time;
 
+  // ★ 승패 메시지 결정 로직
+  let resultMessage = "";
+  if (winner) {
+    if (isSpectator) {
+      resultMessage = winner === 1 ? "백색 승리!" : "흑색 승리!";
+    } else {
+      if (winner === myRole) resultMessage = "승리!";
+      else resultMessage = "패배...";
+    }
+  }
+
   return (
     <div className="container">
       <div className="game-title">QUORIDOR</div>
@@ -340,14 +349,14 @@ function App() {
               <div className="button-group">
                 <button className={`btn p1-btn ${actionMode==='move'?'selected':''}`} onClick={()=>setActionMode('move')} disabled={!isMyTurn||winner}>이동</button>
                 <button className={`btn p1-btn ${actionMode==='wall'?'selected':''}`} onClick={()=>setActionMode('wall')} disabled={!isMyTurn||winner}>벽</button>
-                <button className="btn btn-resign" onClick={resignGame} disabled={winner}>항복</button>
+                {/* 패널 내부의 항복 버튼은 제거함 */}
               </div>
             ) : null}
           </aside>
 
           <section className="board-section" style={{ order: 2 }}>
             <div className="turn-display">
-              {winner ? <span className="win-text">승리!</span> : <span className={turn===1?'t-white':'t-black'}>{turn===1?'● 백색 턴':'● 흑색 턴'}</span>}
+              {winner ? <span className="win-text">{resultMessage}</span> : <span className={turn===1?'t-white':'t-black'}>{turn===1?'● 백색 턴':'● 흑색 턴'}</span>}
             </div>
 
             <TimeBar time={topTime} />
@@ -386,6 +395,14 @@ function App() {
             </div>
 
             <TimeBar time={bottomTime} />
+            
+            {/* ★ 항복 버튼: 내 초읽기 바(하단) 아래 우측 정렬 */}
+            {!isSpectator && !winner && isGameStarted && (
+               <div className="controls-row">
+                 <button className="btn-resign" onClick={resignGame}>항복 (Resign)</button>
+               </div>
+            )}
+
           </section>
 
           <aside className={`side-panel black-area ${turn === 2 && !winner ? 'active' : ''}`} style={{ order: isFlipped ? 1 : 3 }}>
@@ -394,14 +411,22 @@ function App() {
               <div className="button-group">
                 <button className={`btn p2-btn ${actionMode==='move'?'selected':''}`} onClick={()=>setActionMode('move')} disabled={!isMyTurn||winner}>이동</button>
                 <button className={`btn p2-btn ${actionMode==='wall'?'selected':''}`} onClick={()=>setActionMode('wall')} disabled={!isMyTurn||winner}>벽</button>
-                <button className="btn btn-resign" onClick={resignGame} disabled={winner}>항복</button>
               </div>
             ) : null}
           </aside>
         </main>
         
         {isGameStarted && !isSpectator && <button className="reset-float" onClick={resetGame}>🔄</button>}
-        {winner && <div className="overlay"><div className="modal"><h2>{winner===1?'백색':'흑색'} 승리!</h2><button className="reset-large" onClick={resetGame}>로비로</button></div></div>}
+        
+        {/* ★ 승패 모달 텍스트 수정 */}
+        {winner && (
+          <div className="overlay">
+            <div className="modal">
+              <h2>{resultMessage}</h2>
+              <button className="reset-large" onClick={resetGame}>로비로</button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
