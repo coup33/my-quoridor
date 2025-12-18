@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { io } from 'socket.io-client';
 import './App.css';
 
-const socket = io('https://my-quoridor.onrender.com');
+const socket = io('https://my-quoridor.vercel.app/');
 
 function App() {
   const initialState = {
