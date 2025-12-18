@@ -125,3 +125,31 @@
 .start-btn.waiting {
   background: #f39c12; /* 대기 중일 때 노란색 */
 }
+
+/* ... 기존 스타일 아래에 추가 ... */
+
+.free-badge {
+  font-size: 0.8rem;
+  background: #27ae60;
+  color: white;
+  padding: 2px 8px;
+  border-radius: 10px;
+}
+
+.cancel-btn {
+  width: 100%;
+  padding: 10px;
+  margin-top: 10px;
+  background: #95a5a6;
+  color: white;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  font-weight: bold;
+}
+.cancel-btn:hover { background: #7f8c8d; }
+
+.action-buttons {
+  display: flex;
+  flex-direction: column;
+}
