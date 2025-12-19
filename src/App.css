@@ -1,4 +1,4 @@
-/* App.css - Quoridor Web Game Style (Badge Fixed) */
+/* App.css - Quoridor Web Game Style (Responsive Fixed) */
 
 * {
   box-sizing: border-box;
@@ -9,7 +9,7 @@
 }
 
 :root {
-  /* [PC 기본 사이즈] */
+  /* [PC 기본 사이즈 - 큰 화면용] */
   --cell: 54px;
   --gap: 8px;
   --pawn: 40px;
@@ -17,6 +17,51 @@
   
   --unit: calc(var(--cell) + var(--gap));
   --wall-long: calc(var(--cell) * 2 + var(--gap));
+}
+
+/* ★ [핵심 수정] 노트북 및 작은 모니터 대응 (세로 높이가 900px 이하일 때) */
+@media (max-height: 900px) {
+  :root {
+    /* 모든 요소를 비율대로 축소 */
+    --cell: 42px; 
+    --gap: 6px;
+    --pawn: 30px;
+    --wall-thick: 8px;
+  }
+  
+  /* 타이틀 폰트 크기 축소 */
+  .game-title {
+    font-size: 2rem !important;
+    left: 10px !important;
+  }
+  
+  /* 타임바 여백 축소 */
+  .time-bar-wrapper {
+    margin-top: 30px !important;
+    margin-bottom: 4px !important;
+    height: 20px !important;
+  }
+  
+  /* 배지 위치 미세 조정 */
+  .status-badge {
+    top: -25px !important;
+    font-size: 0.7rem !important;
+  }
+  
+  /* 턴 표시 폰트 축소 */
+  .turn-display {
+    font-size: 1rem !important;
+    margin-bottom: 2px !important;
+  }
+  
+  /* 사이드 패널 크기 조정 */
+  .side-panel {
+    width: 140px !important;
+    padding: 10px !important;
+  }
+  
+  .count { font-size: 1.2rem !important; }
+  .btn { padding: 8px !important; font-size: 0.9rem !important; }
 }
 
 body {
@@ -30,7 +75,8 @@ body {
   height: 100vh;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  overflow: hidden; /* 스크롤바 방지 */
+  justify-content: center; /* 세로 중앙 정렬 강화 */
 }
 
 /* --- 타이틀 스타일 (PC: 좌측 세로) --- */
@@ -78,6 +124,7 @@ body {
   gap: 30px;
   width: 100%;
   height: 100%;
+  padding: 10px 0; /* 상하 여백 약간 추가 */
 }
 
 /* --- 플레이어 패널 --- */
@@ -123,7 +170,9 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center; /* 내용물 세로 중앙 정렬 */
   width: auto;
+  height: 100%; /* 부모 높이 꽉 채움 */
 }
 
 .turn-display {
@@ -146,14 +195,11 @@ body {
   position: relative;
   box-shadow: inset 0 2px 5px rgba(0,0,0,0.5);
   margin: 8px 0;
-  /* ★ [수정] 배지 공간 확보를 위해 여백 증가 (25px -> 40px) */
-  margin-top: 40px; 
+  margin-top: 40px; /* 배지 공간 */
 }
 
-/* ★ [수정] 상태 배지 위치 조정 (조금 더 위로) */
 .status-badge {
   position: absolute;
-  /* 타임 바 위로 띄움 (-24px -> -32px) */
   top: -32px; 
   left: 0;
   padding: 3px 8px;
@@ -166,14 +212,8 @@ body {
   white-space: nowrap;
 }
 
-.badge-spectator {
-  background-color: #e03131; /* 빨강 */
-  animation: pulse 2s infinite;
-}
-
-.badge-ingame {
-  background-color: #228be6; /* 파랑 */
-}
+.badge-spectator { background-color: #e03131; animation: pulse 2s infinite; }
+.badge-ingame { background-color: #228be6; }
 
 @keyframes pulse {
   0% { opacity: 1; }
@@ -211,7 +251,8 @@ body {
   max-width: 480px;
   display: flex;
   justify-content: flex-end; 
-  margin-top: 5px;
+  margin-top: 8px;
+  margin-bottom: 5px; /* 바닥에 딱 붙지 않게 여백 추가 */
 }
 
 .btn-resign {
@@ -234,6 +275,8 @@ body {
   background: #181a1b;
   border-radius: 8px;
   box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+  /* 보드 컨테이너도 화면에 맞게 유동적으로 */
+  flex-shrink: 0;
 }
 
 .board {
@@ -305,9 +348,10 @@ body {
   100% { box-shadow: 0 0 5px #fcc419; }
 }
 
-/* 📱 모바일 최적화 */
+/* 📱 모바일 최적화 (가로폭이 좁은 경우) */
 @media (max-width: 768px) {
   :root {
+    /* 모바일에서는 vmin으로 화면 꽉 차게 */
     --cell: 8.5vmin; 
     --gap: 1vmin;
     --pawn: 6vmin;
@@ -351,8 +395,6 @@ body {
   .button-group { flex-direction: row; gap: 5px; }
   .btn { padding: 5px 10px; font-size: 0.8rem; height: 34px;}
 
-  .reset-float { bottom: 10px; right: 10px; padding: 8px 12px; font-size: 0.8rem; }
-  
   /* 모바일에서 메뉴 버튼 */
   .menu-float { bottom: 10px; left: 10px; padding: 8px 12px; font-size: 0.8rem; }
 }
