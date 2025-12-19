@@ -24,7 +24,7 @@ const playSound = (name) => {
   }
 };
 
-// ★ [수정] TimeBar: 상단 정보창(좌/중/우)과 하단 게이지바를 통합 관리
+// 타임바 컴포넌트 (배지, 턴, 항복버튼 포함)
 const TimeBar = ({ time, maxTime = 90, left, center, right }) => {
   const percentage = Math.min(100, Math.max(0, (time / maxTime) * 100));
   let statusClass = '';
@@ -35,7 +35,6 @@ const TimeBar = ({ time, maxTime = 90, left, center, right }) => {
 
   return (
     <div className="time-bar-container">
-      {/* 상단 정보 행 (존재할 때만 렌더링) */}
       {hasHeader && (
         <div className="time-info-row">
           <div className="info-left">{left}</div>
@@ -43,8 +42,6 @@ const TimeBar = ({ time, maxTime = 90, left, center, right }) => {
           <div className="info-right">{right}</div>
         </div>
       )}
-      
-      {/* 진행 바 */}
       <div className="time-bar-track">
         <div className={`time-bar-fill ${statusClass}`} style={{ width: `${percentage}%` }}/>
         <div className="time-text">{time}s</div>
@@ -248,11 +245,10 @@ function App() {
   };
 
   const isSpectator = isGameStarted && myRole !== 1 && myRole !== 2;
-  const isFlipped = myRole === 1; 
+  const isFlipped = myRole === 1; // 내가 P1이면 화면 뒤집힘 (P1이 아래쪽)
   const topTime = isFlipped ? p2Time : p1Time;
   const bottomTime = isFlipped ? p1Time : p2Time;
 
-  // 배지 설정 (왼쪽)
   let topBadge = null;
   if (isGameStarted) {
     if (isSpectator) {
@@ -262,7 +258,6 @@ function App() {
     }
   }
 
-  // 항복 버튼 (오른쪽)
   let resignButton = null;
   if (!isSpectator && !winner && isGameStarted) {
     resignButton = (
@@ -272,7 +267,7 @@ function App() {
     );
   }
 
-  // ★ [추가] 턴 표시 로직 (중앙) - 점 색상 구분
+  // 턴 표시 로직
   let turnIndicator = null;
   if (winner) {
     let resultTitle = "";
@@ -281,7 +276,6 @@ function App() {
     else resultTitle = isWin ? "승리!" : "패배...";
     turnIndicator = <span className="win-text">{resultTitle}</span>;
   } else {
-    // 턴 점 색상 클래스
     const dotClass = turn === 1 ? 'dot-white' : 'dot-black';
     const turnText = turn === 1 ? '백색 턴' : '흑색 턴';
     turnIndicator = (
@@ -352,7 +346,8 @@ function App() {
 
       <div className={`game-wrapper ${!isGameStarted ? 'blurred' : ''}`}>
         <main className="main-content">
-          <aside className={`side-panel white-area ${turn === 1 && !winner ? 'active' : ''}`} style={{ order: isFlipped ? 3 : 1 }}>
+          {/* ★ [수정됨] P1 패널: isFlipped면 아래쪽(pos-bottom), 아니면 위쪽(pos-top) */}
+          <aside className={`side-panel white-area ${turn === 1 && !winner ? 'active' : ''} ${isFlipped ? 'pos-bottom' : 'pos-top'}`} style={{ order: isFlipped ? 3 : 1 }}>
             <div className="wall-counter white-box">벽: <span className="count">{player1.wallCount}</span></div>
             {myRole === 1 ? (
               <div className="button-group">
@@ -361,8 +356,8 @@ function App() {
               </div>
             ) : null}
           </aside>
+          
           <section className="board-section" style={{ order: 2 }}>
-            {/* ★ 상단 타임 바: 좌측 배지 + 중앙 턴표시 + 우측 항복버튼 */}
             <TimeBar time={topTime} left={topBadge} center={turnIndicator} right={resignButton} />
             
             <div className="board-container">
@@ -405,7 +400,9 @@ function App() {
             
             <TimeBar time={bottomTime} />
           </section>
-          <aside className={`side-panel black-area ${turn === 2 && !winner ? 'active' : ''}`} style={{ order: isFlipped ? 1 : 3 }}>
+
+          {/* ★ [수정됨] P2 패널: isFlipped면 위쪽(pos-top), 아니면 아래쪽(pos-bottom) */}
+          <aside className={`side-panel black-area ${turn === 2 && !winner ? 'active' : ''} ${isFlipped ? 'pos-top' : 'pos-bottom'}`} style={{ order: isFlipped ? 1 : 3 }}>
             <div className="wall-counter black-box">벽: <span className="count">{player2.wallCount}</span></div>
             {myRole === 2 ? (
               <div className="button-group">
