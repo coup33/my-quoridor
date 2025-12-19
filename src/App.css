@@ -1,4 +1,4 @@
-/* App.css - Quoridor Web Game Style (Mobile Layout Fixed v2) */
+/* App.css - Quoridor Web Game Style (Mobile Fix Final) */
 
 * {
   box-sizing: border-box;
@@ -31,9 +31,6 @@
   .btn { padding: 8px !important; font-size: 0.9rem !important; }
 }
 
-/* =========================================
-   [기본 스타일 (PC 기준)]
-   ========================================= */
 body {
   font-family: 'Pretendard', sans-serif;
   background-color: #212529;
@@ -48,10 +45,11 @@ body {
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  /* PC는 중앙 정렬 유지 */
   justify-content: center;
+  position: relative; /* 타이틀 배치를 위해 */
 }
 
+/* PC 타이틀 */
 .game-title {
   font-weight: 800;
   letter-spacing: 5px;
@@ -149,100 +147,80 @@ body {
 @keyframes wallPulse { 0% { box-shadow: 0 0 5px #fcc419; } 50% { box-shadow: 0 0 15px #fcc419; } 100% { box-shadow: 0 0 5px #fcc419; } }
 
 /* =================================================
-   [📱 모바일 최적화 (가로폭 768px 이하) - 핵심 수정 구간]
+   [📱 모바일 최적화 (가로폭 768px 이하)]
+   ★ 여기를 대폭 수정하여 화면 짤림 해결 ★
    ================================================= */
 @media (max-width: 768px) {
   :root {
-    /* 보드 크기를 조금 더 줄여서 공간 확보 (7.5 -> 7.0) */
-    --cell: 7.0vmin; 
+    /* 보드 크기를 더 줄여서 위아래 공간 확보 (7.5 -> 6.5vmin) */
+    --cell: 6.5vmin; 
     --gap: 1vmin;
-    --pawn: 5.0vmin;
-    --wall-thick: 1.2vmin;
+    --pawn: 4.5vmin;
+    --wall-thick: 1.0vmin;
   }
 
-  /* 1. 컨테이너 정렬 변경: 중앙 -> 상단부터 시작 */
-  .container {
-    justify-content: flex-start;
-    padding-top: 10px;
-  }
-
-  /* 2. 타이틀 위치 상단으로 올림 */
+  /* 1. 타이틀을 상단에 절대 위치로 고정 (패널과 안 겹치게) */
   .game-title {
-    position: static;
-    transform: none;
-    writing-mode: horizontal-tb;
+    position: absolute;
+    top: 3dvh; /* 상단에서 3% 지점 */
+    left: 0;
     width: 100%;
     text-align: center;
-    /* 상단 마진 제거, 하단 마진 축소 */
-    margin: 0 0 5px 0;
+    transform: none;
+    writing-mode: horizontal-tb;
+    margin: 0;
     font-size: 1.5rem;
-    letter-spacing: 3px;
-    order: -2; /* 가장 위로 */
+    letter-spacing: 2px;
+    z-index: 50; /* 다른 요소 위에 */
   }
 
-  /* 3. 메인 콘텐츠 구조 변경: 세로 배치, 공간 균등 분배 */
+  /* 2. 메인 콘텐츠 구조 변경: 공간 배분 */
   .main-content {
     flex-direction: column;
-    /* 상하 요소들 사이에 공간을 균등하게 배분하여 보드가 중앙에 오게 함 */
-    justify-content: space-between;
-    gap: 0; /* 갭 제거하고 justify-content로 조절 */
+    justify-content: center; /* 중앙 정렬 */
+    gap: 10px;
     padding: 0;
-    flex: 1; /* 남은 세로 공간 모두 차지 */
-    /* 하단 메뉴 버튼과 겹치지 않게 여백 확보 */
-    margin-bottom: 60px; 
+    padding-top: 40px; /* 타이틀 공간 확보 */
+    height: 100%;
   }
-  
-  /* 4. 보드 섹션: 상하 여백 최소화 */
+
+  /* 3. 패널 스타일: 얇고 넓게 */
+  .side-panel {
+    width: 96%;
+    height: 40px;
+    padding: 0 15px;
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    margin: 0;
+    flex-shrink: 0;
+  }
+
+  /* 4. 보드 섹션 */
   .board-section {
     height: auto;
     margin: 5px 0;
   }
 
-  /* 5. 상하단 패널 (상대 정보/내 정보) */
-  .side-panel {
-    width: 96%; /* 가로 꽉 차게 */
-    height: auto; /* 높이 자동 */
-    padding: 8px 15px; /* 내부 여백 축소 */
-    display: flex;
-    flex-direction: row;
-    /* 내용물 중앙 정렬 */
-    justify-content: center; 
-    align-items: center;
-    gap: 15px; /* 글씨와 버튼 사이 간격 */
-    margin: 0 auto; /* 가로 중앙 정렬 */
-    flex-shrink: 0;
+  /* 5. 하단 패널 위치 확보 (가장 중요) */
+  /* 마지막 요소인 내 패널이 메뉴 버튼에 가리지 않도록 마진 추가 */
+  .side-panel:last-child {
+    margin-bottom: 60px; /* 메뉴 버튼 높이만큼 띄움 */
   }
 
-  /* 벽 카운터 글씨 */
   .wall-counter { margin: 0; padding: 0; background: transparent; font-size: 0.9rem; white-space: nowrap; }
   .count { display: inline; font-size: 1.1rem; margin-left: 5px; }
   
-  /* 버튼 그룹 */
-  .button-group { 
-    flex-direction: row; 
-    gap: 8px; 
-    flex-wrap: nowrap;
-  }
-  
-  .btn { 
-    padding: 6px 12px; 
-    font-size: 0.8rem; 
-    height: auto;
-    min-width: 60px;
-  }
+  .button-group { flex-direction: row; gap: 8px; flex-wrap: nowrap; }
+  .btn { padding: 5px 12px; font-size: 0.8rem; height: 30px; min-width: 50px; }
 
-  /* 6. 상단 정보들 간격 밀착 (턴표시, 타임바) */
-  .turn-display {
-    margin-bottom: 2px;
-    font-size: 1rem;
-  }
-  
-  /* 배지 공간 확보를 위한 타임바 마진 (줄임: 35 -> 25px) */
-  .time-bar-wrapper { margin-top: 25px; margin-bottom: 5px; }
-  .status-badge { font-size: 0.65rem; padding: 2px 6px; top: -25px; }
+  /* 6. 상단 타임바 & 배지 위치 미세조정 */
+  .time-bar-wrapper { margin-top: 30px; margin-bottom: 5px; }
+  .status-badge { font-size: 0.7rem; padding: 2px 8px; top: -25px; }
 
-  /* 메뉴 버튼 위치 */
-  .menu-float { bottom: 15px; left: 15px; padding: 10px 15px; font-size: 0.9rem; }
+  /* 7. 메뉴 버튼 위치: 왼쪽 하단 */
+  .menu-float { bottom: 15px; left: 15px; padding: 8px 15px; font-size: 0.85rem; }
 }
 
 /* 로비 & 모달 (변경 없음) */
