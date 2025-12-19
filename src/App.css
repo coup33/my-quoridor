@@ -1,4 +1,4 @@
-/* App.css - Quoridor Web Game Style (Center Grouped + Fixed Controls) */
+/* App.css - Quoridor Web Game Style (Grouped Center Layout) */
 
 * {
   box-sizing: border-box;
@@ -184,7 +184,6 @@ body {
 
 /* =================================================
    [📱 모바일 최적화 (가로폭 768px 이하)]
-   ★ 전략: 중앙 밀집 그룹핑(Opponent+Board) + 하단 고정(Me)
    ================================================= */
 @media (max-width: 768px) {
   :root {
@@ -203,7 +202,7 @@ body {
   /* 2. [상단 고정] 타이틀 */
   .game-title {
     position: absolute; 
-    top: 5px; 
+    top: 2px; 
     left: 50%;
     transform: translateX(-50%);
     width: auto;
@@ -218,7 +217,7 @@ body {
   /* 3. [상단 고정] 메뉴 버튼 */
   .menu-float { 
     position: absolute;
-    top: 8px; 
+    top: 5px; 
     right: 15px;
     bottom: auto; left: auto;
     padding: 6px 12px; 
@@ -226,10 +225,10 @@ body {
     z-index: 200;
   }
 
-  /* 4. [하단 고정] 내 행동 버튼 (화면 바닥에서 띄움) */
+  /* 4. [하단 고정] 행동 버튼 뭉치 (내 패널) */
   .side-panel.pos-bottom {
     position: absolute;
-    bottom: 60px; /* 터치하기 편한 높이 */
+    bottom: 60px; /* 터치 편의를 위해 띄움 */
     left: 50%;
     transform: translateX(-50%);
     
@@ -249,26 +248,27 @@ body {
     box-shadow: 0 -2px 10px rgba(0,0,0,0.3);
   }
 
-  /* 5. [중앙 영역] 메인 콘텐츠: 중앙 밀집 */
+  /* 5. [중앙 영역] 메인 콘텐츠: 중앙 밀집 대형 */
   .main-content {
     flex: 1;
     display: flex;
     flex-direction: column;
     
-    /* 상단(타이틀), 하단(패널) 공간 확보 */
+    /* 상단 타이틀, 하단 패널 공간 확보 */
     padding-top: 50px; 
-    padding-bottom: 120px; /* 하단 패널 위 공간 */
+    padding-bottom: 160px; 
     
-    /* ★ 핵심: 상하 중앙 정렬로 [상대패널+보드]를 가운데로 모음 */
+    /* ★ 핵심: justify-content: center로 요소들을 중앙에 뭉침 */
     justify-content: center; 
     align-items: center;
-    gap: 5px; /* 상대 패널과 보드 사이 간격을 아주 좁게 */
+    
+    /* ★ 핵심: 상대 패널과 보드 사이 간격을 15px로 좁혀서 붙어있게 함 */
+    gap: 15px; 
     height: 100%;
   }
 
-  /* 6. [상대 패널] 이제 main-content 안에서 보드 위에 찰싹 붙음 */
+  /* 6. [상단 패널] 상대방 정보 */
   .side-panel.pos-top {
-    position: relative; /* absolute 제거 */
     width: 75%;
     max-width: 280px;
     height: 38px;
@@ -278,12 +278,9 @@ body {
     justify-content: space-between;
     align-items: center;
     margin: 0 auto;
-    
-    /* 아래쪽 보드와 가까워지도록 마진 제거 */
-    margin-bottom: 0;
-    
     flex-shrink: 0;
     white-space: nowrap;
+    /* justify-content: center 효과로 보드와 가까워짐 */
   }
 
   /* 7. 보드 섹션 */
@@ -299,7 +296,6 @@ body {
   /* 타임바 */
   .turn-display { margin-bottom: 2px; font-size: 0.9rem; flex-shrink: 0; }
   
-  /* 타임바 상단 마진을 줄여서 위쪽 요소와 밀착 */
   .time-bar-container { 
     width: 85%; max-width: 300px; 
     margin-top: 5px; 
