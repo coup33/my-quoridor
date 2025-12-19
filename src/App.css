@@ -1,4 +1,4 @@
-/* App.css - Final Complete Version (Mobile Fixed & Tight Layout) */
+/* App.css - Final Perfect Version (Fixed Bottom Bar & Big Board) */
 
 * {
   box-sizing: border-box;
@@ -24,18 +24,19 @@
   :root { --cell: 42px; --gap: 6px; --pawn: 30px; --wall-thick: 8px; }
   .game-title { font-size: 2rem !important; left: 10px !important; }
   .time-bar-wrapper { margin-top: 30px !important; margin-bottom: 4px !important; height: 20px !important; }
+  .status-badge { top: -25px !important; font-size: 0.7rem !important; }
+  .turn-display { font-size: 1rem !important; margin-bottom: 2px !important; }
   .side-panel { width: 140px !important; padding: 10px !important; }
   .count { font-size: 1.2rem !important; }
   .btn { padding: 8px !important; font-size: 0.9rem !important; }
 }
 
-/* ★ 핵심 1: 화면 전체를 물리적 창틀에 고정 (스크롤/튕김 완벽 방지) */
+/* ★ 1. 화면 전체 고정 (스크롤/튕김 방지) */
 body {
   font-family: 'Pretendard', sans-serif;
   background-color: #212529;
   color: #f8f9fa;
   
-  /* 화면을 뷰포트에 강제로 못 박음 */
   position: fixed; 
   top: 0; left: 0; right: 0; bottom: 0;
   width: 100%; height: 100%;
@@ -47,22 +48,19 @@ body {
   user-select: none;
 }
 
-/* ★ 핵심 2: 여백 제어 (상단 여백을 강제로 줄임) */
+/* ★ 2. 컨테이너: 가로/세로 중앙 정렬 */
 .container {
   width: 100%;
   height: 100%;
   display: flex;
   flex-direction: column;
   
-  /* PC 기준 중앙 정렬 */
   justify-content: center; 
-  align-items: center;     
+  align-items: center; /* 왼쪽 쏠림 방지 */
   
   position: relative;
   
-  /* 모바일에서 노치 영역(safe-area)을 무시하고 10px만 줌 (개발자 도구처럼 딱 붙게) */
-  padding-top: 10px; 
-  /* 하단은 홈 바 때문에 안전 영역 유지 */
+  padding-top: 10px; /* 상단 여백 최소화 */
   padding-bottom: env(safe-area-inset-bottom);
 }
 
@@ -86,7 +84,7 @@ body {
   gap: 30px; width: 100%; height: 100%; padding: 10px 0;
 }
 
-/* 패널 & 버튼 */
+/* 패널 & 버튼 (PC) */
 .side-panel {
   width: 160px; padding: 15px; background: #343a40;
   border: 1px solid #495057; border-radius: 12px;
@@ -112,7 +110,6 @@ body {
 .badge-spectator { background-color: #e03131; animation: pulse 2s infinite; } 
 .badge-ingame { background-color: #228be6; }
 .badge-resign { background-color: #343a40; color: #fa5252; border: 1px solid #fa5252; cursor: pointer; transition: 0.2s; }
-.badge-resign:hover { background-color: #fa5252; color: white; }
 .turn-indicator-box { display: flex; align-items: center; gap: 6px; font-weight: bold; color: #ced4da; font-size: 0.9rem; }
 .turn-dot { width: 12px; height: 12px; border-radius: 50%; display: inline-block; }
 .dot-white { background-color: #f8f9fa; border: 1px solid #adb5bd; } .dot-black { background-color: #212529; border: 1px solid #868e96; }
@@ -120,7 +117,7 @@ body {
 .time-bar-fill { height: 100%; background-color: #27ae60; width: 100%; border-radius: 12px; transition: width 0.5s linear; }
 .time-bar-fill.warning { background-color: #fcc419; } .time-bar-fill.danger { background-color: #e03131; }
 .time-text { position: absolute; width: 100%; text-align: center; top: 50%; transform: translateY(-50%); font-size: 13px; font-weight: bold; color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,0.8); z-index: 2; }
-@keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.7; } 100% { opacity: 1; } }
+@keyframes wallPulse { 0% { box-shadow: 0 0 5px #fcc419; } 50% { box-shadow: 0 0 15px #fcc419; } 100% { box-shadow: 0 0 5px #fcc419; } }
 
 /* 보드판 (PC) */
 .board-container { padding: 10px; background: #181a1b; border-radius: 8px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); flex-shrink: 0; }
@@ -148,33 +145,30 @@ body {
 
 /* =================================================
    [📱 모바일 최적화 (가로폭 768px 이하)]
-   ★ 전략: [타이틀 고정] - [중앙 뭉치(상대+보드)] - [하단 고정]
+   ★ 전략: 타이틀(상단) - 보드(중앙) - 내 패널(하단 고정 바)
    ================================================= */
 @media (max-width: 768px) {
   :root {
-    /* ★ 보드 확대: 8.8vmin (화면 가로폭에 맞게 시원하게) */
-    --cell: 8.8vmin; 
+    /* ★ 보드 확대: 8.5vmin (화면 꽉 차게) */
+    --cell: 8.5vmin; 
     --gap: 1vmin;
     --pawn: 6.0vmin; 
     --wall-thick: 1.5vmin; 
   }
 
-  /* 1. 컨테이너: 상단 정렬 + 가로 중앙 정렬 */
+  /* 1. 컨테이너: 중앙 정렬 */
   .container {
-    justify-content: flex-start;
-    align-items: center; 
-    padding-top: 0; /* body에서 10px 줬으므로 여기선 제거 */
+    justify-content: center;
+    align-items: center; /* 가로 중앙 */
+    padding-top: 0; 
   }
 
-  /* 2. 타이틀: 흐름 내 배치 (absolute 제거) */
+  /* 2. 타이틀: 흐름 내 배치 */
   .game-title {
     position: relative;
     top: auto; left: auto; transform: none; writing-mode: horizontal-tb;
     width: 100%; text-align: center;
-    
-    /* 상단 마진으로 띄우기 (body 10px + 이거 5px = 15px) */
     margin: 5px 0; 
-    
     font-size: 1.5rem; letter-spacing: 2px; z-index: 50;
   }
 
@@ -185,33 +179,46 @@ body {
     padding: 6px 12px; font-size: 0.8rem; z-index: 200;
   }
 
-  /* 4. 하단 고정 내 패널 (pos-bottom) */
+  /* 4. [하단 고정] 내 패널 (가로 바 형태 복구) */
   .side-panel.pos-bottom {
-    position: absolute;
-    bottom: 80px; /* 엄지손가락 닿기 좋은 위치 */
+    position: absolute; /* 다시 고정 위치로 변경 */
+    bottom: 50px; /* 바닥에서 살짝 띄움 */
     left: 50%; transform: translateX(-50%);
-    width: 90%; max-width: 350px; height: 45px;
-    margin: 0; padding: 0 15px; z-index: 100;
-    display: flex; justify-content: space-between; align-items: center;
-    background: #343a40; box-shadow: 0 -2px 10px rgba(0,0,0,0.3);
+    
+    width: 90%; 
+    max-width: 400px;
+    height: 48px;
+    
+    margin: 0; padding: 0 15px; 
+    z-index: 100;
+    
+    /* 가로 배치 (좌: 텍스트, 우: 버튼) */
+    display: flex; 
+    justify-content: space-between; 
+    align-items: center;
+    
+    background: #343a40; 
+    border-radius: 12px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.5); /* 그림자 진하게 */
   }
 
-  /* 5. 중앙 뭉치 (상대패널+보드) */
+  /* 5. 메인 콘텐츠: 중앙 정렬 */
   .main-content {
     flex: 1;
     display: flex; flex-direction: column;
-    /* 상단 패딩으로 위치 잡기 */
-    padding-top: 50px; 
-    padding-bottom: 140px; 
+    
+    /* 하단 패널에 가리지 않게 패딩 확보 */
+    padding-top: 40px; 
+    padding-bottom: 120px; 
     
     justify-content: center; 
-    align-items: center; /* 내부 요소도 중앙 정렬 */
-    gap: 0;
+    align-items: center;
+    gap: 10px;
     width: 100%;
-    height: 100%;
+    height: auto;
   }
 
-  /* 6. 상대 패널 */
+  /* 6. 상대 패널 (상단 배치) */
   .side-panel.pos-top {
     position: relative; 
     width: 90%; max-width: 320px; height: 40px;
@@ -236,7 +243,7 @@ body {
     flex-shrink: 0; 
   }
   
-  /* 8. 기타 스타일 */
+  /* 8. 기타 */
   .status-badge { font-size: 0.65rem; padding: 2px 6px; }
   .wall-counter { margin: 0; padding: 0; background: transparent; font-size: 0.9rem; }
   .count { display: inline; font-size: 1.1rem; margin-left: 5px; }
