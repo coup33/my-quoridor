@@ -1,4 +1,4 @@
-/* App.css - Quoridor Web Game Style (Mobile Layout Perfect Fix) */
+/* App.css - Quoridor Web Game Style (Final Mobile Fix v4) */
 
 * {
   box-sizing: border-box;
@@ -152,95 +152,105 @@ body {
 
 /* =================================================
    [📱 모바일 최적화 (가로폭 768px 이하)]
-   ★ 화면 중앙 정렬 및 비율 배분 최종 수정 ★
+   ★ 최종 수정: 배치 및 버튼 찌그러짐 해결 ★
    ================================================= */
 @media (max-width: 768px) {
   :root {
-    /* 보드 크기: 세로 공간 확보를 위해 적절히 조정 */
-    --cell: 6.5vmin; 
+    /* 보드 사이즈 최적화 */
+    --cell: 7.0vmin; 
     --gap: 1vmin;
-    --pawn: 4.5vmin;
+    --pawn: 5.0vmin;
     --wall-thick: 1.0vmin;
   }
 
-  /* 1. 컨테이너: 상단부터 정렬하되 여백 없앰 */
+  /* 1. 컨테이너 패딩 추가 (상단 공간 확보) */
   .container {
     justify-content: flex-start;
-    padding: 0;
+    padding-top: 50px; /* 타이틀 영역 */
   }
 
-  /* 2. 타이틀: 상단에 상대적으로 배치 (겹침 방지) */
+  /* 2. 타이틀: 최상단 중앙 고정 */
   .game-title {
-    position: relative; /* flow 안에 포함 */
-    top: auto;
-    left: auto;
-    transform: none;
+    position: absolute;
+    top: 10px;
+    left: 50%;
+    transform: translateX(-50%); /* 정확한 중앙 정렬 */
+    width: auto;
     writing-mode: horizontal-tb;
-    width: 100%;
-    height: 40px; /* 고정 높이 할당 */
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin: 5px 0 0 0;
-    font-size: 1.4rem;
+    margin: 0;
+    font-size: 1.5rem;
     letter-spacing: 2px;
-    order: -2; 
+    z-index: 50;
+    white-space: nowrap;
   }
 
-  /* 3. 메뉴 버튼: 우측 상단 모서리 고정 */
-  .menu-float {
+  /* 3. 메뉴 버튼: 우측 상단 고정 (타이틀 옆) */
+  .menu-float { 
     position: absolute;
     top: 10px;
     right: 15px;
-    bottom: auto;
     left: auto;
-    padding: 5px 10px;
-    font-size: 0.75rem;
-    z-index: 200;
+    bottom: auto;
+    padding: 6px 12px; 
+    font-size: 0.75rem; 
+    z-index: 100;
   }
 
-  /* 4. 메인 콘텐츠: 남은 높이를 균등 배분 (space-evenly) */
+  /* 4. 메인 콘텐츠: 세로 정렬 및 공간 분배 */
   .main-content {
-    flex: 1; /* 남은 공간 모두 차지 */
+    flex: 1;
     flex-direction: column;
-    justify-content: space-evenly; /* ★ 핵심: 요소 간 간격 자동 배분 */
+    justify-content: center; /* 내용물 중앙 집중 */
     align-items: center;
-    gap: 0; 
-    padding: 0 0 15px 0; /* 하단 내비게이션 바 고려 패딩 */
+    gap: 10px;
+    padding: 0;
     height: auto;
   }
 
-  /* 5. 상하단 패널 (벽 정보) */
+  /* 5. 패널 스타일 (버튼 가로 정렬 강제) */
   .side-panel {
-    /* ★ 너비를 확 줄여서 타임바보다 짧게 (요청사항 반영) */
-    width: 75%;
-    max-width: 280px; 
-    height: 38px;
-    padding: 0 10px;
+    /* 너비는 화면의 90%까지 쓰되, 버튼이 있으므로 공간 확보 */
+    width: 90%; 
+    max-width: 350px; /* 너무 넓어지지 않게 */
+    height: 45px; /* 높이 약간 증가 */
+    padding: 0 15px;
     display: flex;
     flex-direction: row;
     justify-content: space-between;
     align-items: center;
-    margin: 0; 
+    margin: 0 auto; /* 중앙 정렬 */
     flex-shrink: 0;
   }
 
-  /* 6. 보드 섹션 */
-  .board-section {
-    height: auto;
-    margin: 0; /* 여백 제거하고 space-evenly에 맡김 */
+  /* 6. 버튼 그룹: 절대 줄바꿈 금지 */
+  .button-group { 
+    display: flex;
+    flex-direction: row; 
+    gap: 8px; 
+    flex-wrap: nowrap; /* ★ 핵심: 줄바꿈 방지 */
+  }
+  
+  .btn { 
+    padding: 0 12px; /* 상하 패딩 대신 높이로 조절 */
+    font-size: 0.8rem; 
+    height: 32px; 
+    line-height: 32px;
+    min-width: 60px; /* 최소 너비 확보 */
   }
 
-  /* 7. 턴 표시 및 타임바 간격 */
-  .turn-display { margin-bottom: 2px; font-size: 0.9rem; }
-  .time-bar-wrapper { margin-top: 25px; margin-bottom: 5px; width: 90%; max-width: 350px; }
-  .status-badge { font-size: 0.65rem; padding: 2px 6px; top: -22px; }
+  /* 7. 타임바 간격 및 배지 위치 */
+  .time-bar-wrapper { margin-top: 30px; margin-bottom: 5px; width: 90%; max-width: 350px; }
+  .status-badge { font-size: 0.7rem; padding: 2px 8px; top: -25px; }
 
-  /* 8. 글자 및 버튼 크기 미세 조정 */
-  .wall-counter { font-size: 0.85rem; }
-  .count { font-size: 1rem; margin-left: 5px; }
-  .button-group { gap: 8px; }
-  .btn { padding: 4px 10px; font-size: 0.75rem; height: 28px; min-width: 50px; }
+  /* 8. 하단 패널 여백 (화면 밖으로 안 나가게) */
+  .side-panel:last-child {
+    margin-bottom: 20px; 
+  }
+  
+  /* 보드 섹션 여백 */
+  .board-section {
+    margin: 5px 0;
+  }
 }
 
 /* 로비 & 모달 (변경 없음) */
