@@ -1,4 +1,4 @@
-/* App.css - Final Perfect Version (Fixed Bottom Bar & Big Board) */
+/* App.css - The "Initial Perfect" Standard Version (Stable & Fixed) */
 
 * {
   box-sizing: border-box;
@@ -31,12 +31,13 @@
   .btn { padding: 8px !important; font-size: 0.9rem !important; }
 }
 
-/* ★ 1. 화면 전체 고정 (스크롤/튕김 방지) */
+/* ★ 화면 고정 (모바일 흔들림/스크롤 방지) */
 body {
   font-family: 'Pretendard', sans-serif;
   background-color: #212529;
   color: #f8f9fa;
   
+  /* 뷰포트 고정 */
   position: fixed; 
   top: 0; left: 0; right: 0; bottom: 0;
   width: 100%; height: 100%;
@@ -48,7 +49,7 @@ body {
   user-select: none;
 }
 
-/* ★ 2. 컨테이너: 가로/세로 중앙 정렬 */
+/* ★ 컨테이너: 완전 중앙 정렬 (왼쪽 쏠림 해결) */
 .container {
   width: 100%;
   height: 100%;
@@ -56,11 +57,12 @@ body {
   flex-direction: column;
   
   justify-content: center; 
-  align-items: center; /* 왼쪽 쏠림 방지 */
+  align-items: center; /* 가로 중앙 정렬 */
   
   position: relative;
   
-  padding-top: 10px; /* 상단 여백 최소화 */
+  /* 상단 여백 최소화 */
+  padding-top: 10px; 
   padding-bottom: env(safe-area-inset-bottom);
 }
 
@@ -110,6 +112,7 @@ body {
 .badge-spectator { background-color: #e03131; animation: pulse 2s infinite; } 
 .badge-ingame { background-color: #228be6; }
 .badge-resign { background-color: #343a40; color: #fa5252; border: 1px solid #fa5252; cursor: pointer; transition: 0.2s; }
+.badge-resign:hover { background-color: #fa5252; color: white; }
 .turn-indicator-box { display: flex; align-items: center; gap: 6px; font-weight: bold; color: #ced4da; font-size: 0.9rem; }
 .turn-dot { width: 12px; height: 12px; border-radius: 50%; display: inline-block; }
 .dot-white { background-color: #f8f9fa; border: 1px solid #adb5bd; } .dot-black { background-color: #212529; border: 1px solid #868e96; }
@@ -145,31 +148,33 @@ body {
 
 /* =================================================
    [📱 모바일 최적화 (가로폭 768px 이하)]
-   ★ 전략: 타이틀(상단) - 보드(중앙) - 내 패널(하단 고정 바)
+   ★ 가장 안정적이었던 초기 스타일 복원 (Standard Layout)
+   ★ 절대 위치(fixed/absolute) 제거, 순수 스택 구조
    ================================================= */
 @media (max-width: 768px) {
   :root {
-    /* ★ 보드 확대: 8.5vmin (화면 꽉 차게) */
-    --cell: 8.5vmin; 
+    /* 초기 완벽했던 비율: 6.0vmin (과도하게 크지 않음) */
+    --cell: 6.0vmin; 
     --gap: 1vmin;
-    --pawn: 6.0vmin; 
-    --wall-thick: 1.5vmin; 
+    --pawn: 4.2vmin;
+    --wall-thick: 1.0vmin;
   }
 
-  /* 1. 컨테이너: 중앙 정렬 */
+  /* 1. 컨테이너: 다시 중앙 정렬로 복귀 (로비 깨짐 방지) */
   .container {
-    justify-content: center;
+    justify-content: center; /* 로비 때문에 중앙 정렬 필요 */
     align-items: center; /* 가로 중앙 */
-    padding-top: 0; 
+    padding-top: 0;
   }
 
-  /* 2. 타이틀: 흐름 내 배치 */
+  /* 2. 타이틀: 흐름 내 배치 (absolute 제거) */
   .game-title {
     position: relative;
     top: auto; left: auto; transform: none; writing-mode: horizontal-tb;
     width: 100%; text-align: center;
-    margin: 5px 0; 
-    font-size: 1.5rem; letter-spacing: 2px; z-index: 50;
+    margin: 5px 0; /* 위아래 여백 */
+    font-size: 1.5rem; letter-spacing: 2px;
+    z-index: 50;
   }
 
   /* 3. 메뉴 버튼: 우측 상단 고정 */
@@ -179,72 +184,47 @@ body {
     padding: 6px 12px; font-size: 0.8rem; z-index: 200;
   }
 
-  /* 4. [하단 고정] 내 패널 (가로 바 형태 복구) */
-  .side-panel.pos-bottom {
-    position: absolute; /* 다시 고정 위치로 변경 */
-    bottom: 50px; /* 바닥에서 살짝 띄움 */
-    left: 50%; transform: translateX(-50%);
-    
-    width: 90%; 
-    max-width: 400px;
-    height: 48px;
-    
-    margin: 0; padding: 0 15px; 
-    z-index: 100;
-    
-    /* 가로 배치 (좌: 텍스트, 우: 버튼) */
-    display: flex; 
-    justify-content: space-between; 
-    align-items: center;
-    
-    background: #343a40; 
-    border-radius: 12px;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.5); /* 그림자 진하게 */
-  }
-
-  /* 5. 메인 콘텐츠: 중앙 정렬 */
+  /* 4. 메인 콘텐츠: 위에서 아래로 순서대로 쌓음 */
   .main-content {
     flex: 1;
     display: flex; flex-direction: column;
-    
-    /* 하단 패널에 가리지 않게 패딩 확보 */
-    padding-top: 40px; 
-    padding-bottom: 120px; 
-    
-    justify-content: center; 
+    justify-content: center; /* 내용물 중앙 정렬 */
     align-items: center;
-    gap: 10px;
+    gap: 10px; /* 요소 간 간격 */
+    padding: 10px 0;
     width: 100%;
     height: auto;
   }
 
-  /* 6. 상대 패널 (상단 배치) */
-  .side-panel.pos-top {
-    position: relative; 
+  /* 5. 패널 공통 (상대/나 모두) - 90% 너비 박스형 */
+  .side-panel {
     width: 90%; max-width: 320px; height: 40px;
     padding: 0 10px;
     display: flex; justify-content: space-between; align-items: center;
-    margin: 0 auto; 
-    margin-bottom: 5px; 
+    margin: 0 auto;
     flex-shrink: 0;
+    white-space: nowrap;
+    position: relative; /* 고정 위치 해제 */
+    bottom: auto; left: auto; transform: none; /* 고정 속성 초기화 */
   }
 
-  /* 7. 보드 섹션 */
+  /* 6. 보드 섹션 */
   .board-section {
     flex-shrink: 0; margin: 0;
     display: flex; flex-direction: column;
     justify-content: center; align-items: center;
   }
-  
+
+  /* 타임바 & 턴 정보 */
   .time-bar-container { 
-    width: 90%; max-width: 320px;
-    margin-top: 0 !important; 
+    width: 90%; max-width: 320px; 
+    margin-top: 5px; 
     margin-bottom: 5px;
     flex-shrink: 0; 
   }
-  
-  /* 8. 기타 */
   .status-badge { font-size: 0.65rem; padding: 2px 6px; }
+  
+  /* 버튼, 텍스트 */
   .wall-counter { margin: 0; padding: 0; background: transparent; font-size: 0.9rem; }
   .count { display: inline; font-size: 1.1rem; margin-left: 5px; }
   .button-group { display: flex; flex-direction: row; gap: 8px; flex-wrap: nowrap; flex-shrink: 0; }
