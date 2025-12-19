@@ -1,4 +1,4 @@
-/* App.css - Quoridor Web Game Style (Grouped Center + Fixed Bottom Anchor) */
+/* App.css - Quoridor Web Game Style (Structural Reset) */
 
 * {
   box-sizing: border-box;
@@ -24,8 +24,6 @@
   :root { --cell: 42px; --gap: 6px; --pawn: 30px; --wall-thick: 8px; }
   .game-title { font-size: 2rem !important; left: 10px !important; }
   .time-bar-wrapper { margin-top: 30px !important; margin-bottom: 4px !important; height: 20px !important; }
-  .status-badge { top: -25px !important; font-size: 0.7rem !important; }
-  .turn-display { font-size: 1rem !important; margin-bottom: 2px !important; }
   .side-panel { width: 140px !important; padding: 10px !important; }
   .count { font-size: 1.2rem !important; }
   .btn { padding: 8px !important; font-size: 0.9rem !important; }
@@ -184,7 +182,6 @@ body {
 
 /* =================================================
    [📱 모바일 최적화 (가로폭 768px 이하)]
-   ★ 전략: [상대패널+보드] 중앙 그룹핑 & [내 패널] 바닥 고정
    ================================================= */
 @media (max-width: 768px) {
   :root {
@@ -194,7 +191,7 @@ body {
     --wall-thick: 1.0vmin;
   }
 
-  /* 1. 컨테이너: 상단 정렬 */
+  /* 1. 컨테이너 */
   .container {
     justify-content: flex-start;
     padding-top: 0;
@@ -226,10 +223,10 @@ body {
     z-index: 200;
   }
 
-  /* 4. [하단 고정] 행동 버튼 (내 패널) */
+  /* 4. [하단 고정] 행동 버튼 뭉치 (내 패널) */
   .side-panel.pos-bottom {
     position: absolute;
-    bottom: 60px; /* 바닥에서 충분히 띄움 */
+    bottom: 60px; /* 바닥에서 띄움 */
     left: 50%;
     transform: translateX(-50%);
     
@@ -249,26 +246,25 @@ body {
     box-shadow: 0 -2px 10px rgba(0,0,0,0.3);
   }
 
-  /* 5. [중앙 영역] 메인 콘텐츠: 중앙 밀집 */
+  /* 5. [중앙 영역] 메인 콘텐츠: 중앙 밀집 대형 */
   .main-content {
     flex: 1;
     display: flex;
     flex-direction: column;
     
-    /* 상단 타이틀, 하단 패널 공간 확보 */
+    /* 상단 타이틀, 하단 패널 공간 확보 후 중앙 정렬 */
     padding-top: 50px; 
-    padding-bottom: 160px; 
+    padding-bottom: 120px; 
     
-    /* ★ 중앙 정렬로 [상대패널+보드]를 모음 */
-    justify-content: center; 
-    align-items: center;
-    gap: 15px; /* 상대 패널과 보드 사이 간격 */
+    justify-content: center; /* 세로 중앙 정렬 */
+    align-items: center;     /* 가로 중앙 정렬 */
+    gap: 4px; /* ★ 상대 패널과 보드를 찰싹 붙임 */
     height: 100%;
   }
 
-  /* 6. [상대 패널] main-content 흐름 안에 포함 */
+  /* 6. [상단 패널] 상대방 정보 */
   .side-panel.pos-top {
-    position: relative; /* absolute 아님 */
+    position: relative;
     width: 75%;
     max-width: 280px;
     height: 38px;
@@ -278,9 +274,11 @@ body {
     justify-content: space-between;
     align-items: center;
     margin: 0 auto;
-    
     flex-shrink: 0;
     white-space: nowrap;
+    
+    /* 아래쪽 마진을 없애서 보드와 붙게 함 */
+    margin-bottom: 0;
   }
 
   /* 7. 보드 섹션 */
@@ -296,9 +294,10 @@ body {
   /* 타임바 */
   .turn-display { margin-bottom: 2px; font-size: 0.9rem; flex-shrink: 0; }
   
+  /* 타임바 상단 마진을 줄여서 상대 패널과 밀착 */
   .time-bar-container { 
     width: 85%; max-width: 300px; 
-    margin-top: 5px; 
+    margin-top: 2px; /* 아주 좁게 */
     flex-shrink: 0; 
   }
   .status-badge { font-size: 0.65rem; padding: 2px 6px; }
