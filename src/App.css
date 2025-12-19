@@ -1,4 +1,10 @@
-/* App.css - [demo_version_1] 복구판 (가로 중앙 정렬 수정 완료) */
+/* App.css - demo_version_1 (Fixed: Override index.css & Full Center) */
+
+/* ★ 핵심 수정: index.css의 방해를 무시하고 화면을 꽉 채움 */
+#root {
+  width: 100%;
+  height: 100%;
+}
 
 * {
   box-sizing: border-box;
@@ -35,13 +41,16 @@ body {
   font-family: 'Pretendard', sans-serif;
   background-color: #212529;
   color: #f8f9fa;
-  overflow: hidden;
-  /* 모바일 강제 고정 해제 (원래대로) */
+  
+  /* ★ 수정: index.css의 flex 설정을 강제로 끄고 block으로 변경 */
+  display: block !important; 
+  place-items: unset !important;
+  
   width: 100vw;
   height: 100vh;
+  overflow: hidden;
 }
 
-/* ★ 여기가 핵심: 빠져있던 가로 정렬 추가 */
 .container {
   width: 100%;
   height: 100%; 
@@ -49,9 +58,8 @@ body {
   flex-direction: column;
   overflow: hidden;
   
-  /* 세로 중앙 */
+  /* 가로/세로 완전 중앙 정렬 */
   justify-content: center;
-  /* ★ [수정] 가로 중앙 정렬 (이게 없어서 왼쪽으로 쏠림) */
   align-items: center; 
   
   position: relative;
@@ -147,7 +155,7 @@ body {
 .white-pawn { background: #f8f9fa; } .black-pawn { background: #212529; border: 2px solid #868e96; }
 .move-dot { width: 25%; height: 25%; background: rgba(0,0,0,0.3); border-radius: 50%; }
 
-/* 흑색 잔상 (수정된 버전 유지: 테두리 보이게) */
+/* 흑색 잔상 (잘 보이도록 테두리 수정됨) */
 .ghost-pawn { width: var(--pawn); height: var(--pawn); border-radius: 50%; position: absolute; z-index: 4; opacity: 0.4; pointer-events: none; transform: scale(0.8); box-shadow: none; }
 .ghost-white { background: #f8f9fa; border: 2px dashed #adb5bd; } 
 .ghost-black { background: #212529; border: 2px dashed rgba(255, 255, 255, 0.7); }
@@ -168,25 +176,24 @@ body {
 
 /* =================================================
    [📱 모바일 최적화 (가로폭 768px 이하)]
-   [demo_version_1]: 가장 안정적인 초기 스타일 (Standard Layout)
+   [demo_version_1]: 가장 안정적인 초기 스타일
    ================================================= */
 @media (max-width: 768px) {
   :root {
-    /* 초기 완벽했던 비율: 6.0vmin */
     --cell: 6.0vmin; 
     --gap: 1vmin;
     --pawn: 4.2vmin;
     --wall-thick: 1.0vmin;
   }
 
-  /* 1. 컨테이너: 다시 중앙 정렬로 복귀 */
+  /* 1. 컨테이너: 중앙 정렬 */
   .container {
     justify-content: center; 
     align-items: center; /* 가로 중앙 정렬 */
     padding-top: 0;
   }
 
-  /* 2. 타이틀: 흐름 내 배치 */
+  /* 2. 타이틀 */
   .game-title {
     position: relative;
     top: auto; left: auto; transform: none; writing-mode: horizontal-tb;
@@ -203,7 +210,7 @@ body {
     padding: 6px 12px; font-size: 0.8rem; z-index: 200;
   }
 
-  /* 4. 메인 콘텐츠: 위에서 아래로 순서대로 쌓음 */
+  /* 4. 메인 콘텐츠: 스택형 배치 */
   .main-content {
     flex: 1;
     display: flex; flex-direction: column;
@@ -223,7 +230,7 @@ body {
     margin: 0 auto;
     flex-shrink: 0;
     white-space: nowrap;
-    position: relative; /* 고정 위치 해제 */
+    position: relative; 
     bottom: auto; left: auto; transform: none; 
   }
 
@@ -234,7 +241,7 @@ body {
     justify-content: center; align-items: center;
   }
 
-  /* 타임바 & 턴 정보 */
+  /* 타임바 */
   .time-bar-container { 
     width: 90%; max-width: 320px; 
     margin-top: 5px; 
