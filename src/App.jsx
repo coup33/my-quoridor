@@ -24,7 +24,7 @@ const playSound = (name) => {
   }
 };
 
-const TimeBar = ({ time, maxTime = 90, badge }) => {
+const TimeBar = ({ time, maxTime = 90, badge, rightElement }) => {
   const percentage = Math.min(100, Math.max(0, (time / maxTime) * 100));
   let statusClass = '';
   if (time < 10) statusClass = 'danger';
@@ -32,8 +32,8 @@ const TimeBar = ({ time, maxTime = 90, badge }) => {
 
   return (
     <div className="time-bar-wrapper">
-      {/* ★ 여기에 배지 표시 (존재할 경우) */}
       {badge}
+      {rightElement}
       <div className={`time-bar-fill ${statusClass}`} style={{ width: `${percentage}%` }}/>
       <div className="time-text">{time}s</div>
     </div>
@@ -51,7 +51,7 @@ function App() {
     p2Time: 60,
     lastMove: null, 
     lastWall: null,
-    winReason: null // 서버에서 받는 승리 사유
+    winReason: null
   };
 
   const [player1, setPlayer1] = useState(initialState.p1);
@@ -142,7 +142,7 @@ function App() {
     setTurn(state.turn);
     setWalls(state.walls || []);
     setWinner(state.winner);
-    setWinReason(state.winReason); // 승리 사유 동기화
+    setWinReason(state.winReason);
     setP1Time(state.p1Time);
     setP2Time(state.p2Time);
     setLastMove(state.lastMove);
@@ -152,14 +152,12 @@ function App() {
   const emitAction = (newState) => socket.emit('game_action', newState);
   const selectRole = (role) => socket.emit('select_role', role);
   const toggleReady = () => myRole && socket.emit('player_ready', myRole);
-  
   const resetGame = () => { socket.emit('reset_game'); };
   const resignGame = () => { if(window.confirm("정말 기권하시겠습니까?")) socket.emit('resign_game'); };
   const startAiGame = (difficulty) => { socket.emit('start_ai_game', difficulty); };
 
   const isMyTurn = turn === myRole;
 
-  // ... (게임 로직 함수들은 그대로 유지) ...
   const isBlockedByWall = (currentX, currentY, targetX, targetY, currentWalls) => {
     if (targetY < currentY) return currentWalls.some(w => w.orientation === 'h' && w.y === targetY && (w.x === currentX || w.x === currentX - 1));
     if (targetY > currentY) return currentWalls.some(w => w.orientation === 'h' && w.y === currentY && (w.x === currentX || w.x === currentX - 1));
@@ -236,39 +234,38 @@ function App() {
     else return { left: `calc(${wall.x} * var(--unit))`, top: `calc(${wall.y} * var(--unit) + var(--cell))` };
   };
 
-  // --- 화면 렌더링 준비 ---
   const isSpectator = isGameStarted && myRole !== 1 && myRole !== 2;
   const isFlipped = myRole === 1; 
   const topTime = isFlipped ? p2Time : p1Time;
   const bottomTime = isFlipped ? p1Time : p2Time;
 
-  // ★ 배지(Badge) 결정
   let topBadge = null;
   if (isGameStarted) {
     if (isSpectator) {
-      topBadge = <div className="status-badge badge-spectator">관전 모드 (Spectator)</div>;
+      topBadge = <div className="status-badge badge-spectator">관전 모드</div>;
     } else {
-      // 내가 플레이어라면 상대편 바 위에 "게임 중" 표시 (또는 내 상태 표시? 사용자 요청은 '게임중' 표시)
-      // "관전모드 위치" = 상단 바 왼쪽 위. 여기에 "게임 중"을 띄움.
-      topBadge = <div className="status-badge badge-ingame">게임 진행 중 (Playing)</div>;
+      topBadge = <div className="status-badge badge-ingame">게임 중</div>;
     }
   }
 
-  // ★ 결과 메시지 생성 (시간 초과 반영)
+  let resignButton = null;
+  if (!isSpectator && !winner && isGameStarted) {
+    resignButton = (
+      <button className="status-badge badge-resign" onClick={resignGame}>
+        항복
+      </button>
+    );
+  }
+
   let resultTitle = "";
   let resultDesc = "";
-  
   if (winner) {
     const isWin = winner === myRole;
-    
-    // 제목 결정
     if (isSpectator) resultTitle = winner === 1 ? "백색 승리!" : "흑색 승리!";
     else resultTitle = isWin ? "승리!" : "패배...";
-
-    // 부연 설명 (시간초과/기권 등)
+    
     if (winReason === 'timeout') resultDesc = "(시간 초과)";
     else if (winReason === 'resign') resultDesc = "(기권)";
-    else if (winReason === 'goal') resultDesc = ""; // 골인은 기본이므로 생략
   }
 
   return (
@@ -324,10 +321,9 @@ function App() {
       )}
 
       <div className={`game-wrapper ${!isGameStarted ? 'blurred' : ''}`}>
-        {/* 기존 헤더 삭제됨 */}
         <main className="main-content">
           <aside className={`side-panel white-area ${turn === 1 && !winner ? 'active' : ''}`} style={{ order: isFlipped ? 3 : 1 }}>
-            <div className="wall-counter white-box">남은 벽: <span className="count">{player1.wallCount}</span></div>
+            <div className="wall-counter white-box">벽: <span className="count">{player1.wallCount}</span></div>
             {myRole === 1 ? (
               <div className="button-group">
                 <button className={`btn p1-btn ${actionMode==='move'?'selected':''}`} onClick={()=>setActionMode('move')} disabled={!isMyTurn||winner}>이동</button>
@@ -340,8 +336,7 @@ function App() {
               {winner ? <span className="win-text">{resultTitle}</span> : <span className={turn===1?'t-white':'t-black'}>{turn===1?'● 백색 턴':'● 흑색 턴'}</span>}
             </div>
 
-            {/* ★ 상단 타임 바에 배지 전달 */}
-            <TimeBar time={topTime} badge={topBadge} />
+            <TimeBar time={topTime} badge={topBadge} rightElement={resignButton} />
             
             <div className="board-container">
               <div className="board" style={{ transform: isFlipped ? 'rotate(180deg)' : 'none' }}>
@@ -381,17 +376,10 @@ function App() {
               </div>
             </div>
             
-            {/* 하단 타임 바 (배지 없음) */}
             <TimeBar time={bottomTime} />
-
-            {!isSpectator && !winner && isGameStarted && (
-               <div className="controls-row">
-                 <button className="btn-resign" onClick={resignGame}>항복 (Resign)</button>
-               </div>
-            )}
           </section>
           <aside className={`side-panel black-area ${turn === 2 && !winner ? 'active' : ''}`} style={{ order: isFlipped ? 1 : 3 }}>
-            <div className="wall-counter black-box">남은 벽: <span className="count">{player2.wallCount}</span></div>
+            <div className="wall-counter black-box">벽: <span className="count">{player2.wallCount}</span></div>
             {myRole === 2 ? (
               <div className="button-group">
                 <button className={`btn p2-btn ${actionMode==='move'?'selected':''}`} onClick={()=>setActionMode('move')} disabled={!isMyTurn||winner}>이동</button>
@@ -415,7 +403,6 @@ function App() {
           </div>
         )}
 
-        {/* 결과 모달 */}
         {winner && (
           <div className="overlay">
             <div className="modal">
