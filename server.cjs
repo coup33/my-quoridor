@@ -41,7 +41,6 @@ let isGameStarted = false;
 let gameInterval = null;
 
 // --- Helper Functions ---
-// 보드 내부인지 확인
 const inBoard = (x, y) => x >= 0 && x < 9 && y >= 0 && y < 9;
 
 const isBlocked = (cx, cy, tx, ty, walls) => {
@@ -84,7 +83,6 @@ const getPathData = (startNode, targetRow, currentWalls) => {
 };
 
 const isValidWall = (x, y, orientation, currentWalls, p1Pos, p2Pos) => {
-  // 범위 체크
   if (x < 0 || x > 7 || y < 0 || y > 7) return false;
 
   const isOverlap = currentWalls.some(w => {
@@ -106,11 +104,11 @@ const isValidWall = (x, y, orientation, currentWalls, p1Pos, p2Pos) => {
 };
 
 
-// --- AI Logic (활성화됨) ---
+// --- AI Logic ---
 const processAIMove = () => {
   if (gameState.winner) return;
+
   setTimeout(() => {
-    // 턴이 바뀌었거나 게임이 끝났으면 중단
     if (gameState.winner || !isGameStarted || gameState.turn !== 2) return;
 
     const p2Pos = { x: gameState.p2.x, y: gameState.p2.y };
@@ -124,12 +122,10 @@ const processAIMove = () => {
     const myPathData = getPathData(p2Pos, 0, walls);
     const oppPathData = getPathData(p1Pos, 8, walls);
 
-    // 난이도별 로직
+    // AI 난이도별 로직 (기존 유지)
     if (difficulty === 1) { 
-       // 매우 쉬움: 그냥 달림
        if (myPathData?.nextStep) moveAction = myPathData.nextStep;
     } else if (difficulty === 2) { 
-       // 쉬움: 가끔 랜덤 벽
        if (Math.random() < 0.2 && gameState.p2.wallCount > 0) {
           for(let i=0; i<15; i++) {
              const rx = Math.floor(Math.random() * 8);
@@ -143,7 +139,6 @@ const processAIMove = () => {
        }
        if (!wallAction && myPathData?.nextStep) moveAction = myPathData.nextStep;
     } else if (difficulty === 3) {
-       // 보통: 상대 방어
        if (oppPathData?.distance <= 3 && gameState.p2.wallCount > 0) {
           const nextNode = oppPathData.fullPath[1] || oppPathData.fullPath[0];
           const candidates = [
@@ -161,22 +156,22 @@ const processAIMove = () => {
        }
        if (!wallAction && myPathData?.nextStep) moveAction = myPathData.nextStep;
     } else if (difficulty === 4) {
-       // 어려움: 전략적 벽 (현재는 3단계와 유사하지만 추후 확장 가능)
        if ((myPathData?.distance || 999) >= (oppPathData?.distance || 999) - 1 && gameState.p2.wallCount > 0) { 
            // ... (간소화)
        }
        if (!wallAction && myPathData?.nextStep) moveAction = myPathData.nextStep;
     }
 
-    // 만약 결정된 게 없으면(길이 막혔거나 등등) 최단 경로 이동 시도
+    // 기본 이동 (최단 경로)
     if (!moveAction && !wallAction && myPathData?.nextStep) moveAction = myPathData.nextStep;
 
-    // 그래도 없으면(갇힘?) 랜덤 이동 시도 (비상 대책)
+    // 비상 이동 (랜덤)
     if (!moveAction && !wallAction) {
         const neighbors = [
             {x: p2Pos.x, y: p2Pos.y-1}, {x: p2Pos.x, y: p2Pos.y+1},
             {x: p2Pos.x-1, y: p2Pos.y}, {x: p2Pos.x+1, y: p2Pos.y}
         ];
+        neighbors.sort(() => Math.random() - 0.5);
         for (let n of neighbors) {
             if (inBoard(n.x, n.y) && !isBlocked(p2Pos.x, p2Pos.y, n.x, n.y, walls)) {
                 moveAction = n;
@@ -185,18 +180,20 @@ const processAIMove = () => {
         }
     }
 
-    // 상태 업데이트
     let newState = { ...gameState };
     
+    // AI 행동 반영 (중요: 여기서도 lastMove 업데이트!)
     if (wallAction) {
         newState.walls.push(wallAction);
         newState.p2.wallCount -= 1;
         newState.lastWall = wallAction;
         newState.lastMove = null;
     } else if (moveAction) {
+        // ★ AI(P2) 이동 시 잔상 남기기
         newState.lastMove = { player: 2, x: gameState.p2.x, y: gameState.p2.y };
         newState.lastWall = null;
         newState.p2 = { ...gameState.p2, x: moveAction.x, y: moveAction.y };
+        
         if (newState.p2.y === 0) {
             newState.winner = 2;
             newState.winReason = 'goal';
@@ -294,7 +291,14 @@ io.on('connection', (socket) => {
     if (roles[1] !== socket.id && roles[2] !== socket.id) return;
     if (gameState.winner) return;
 
-    // 흑색(P2) 이동 감지 로직 강화
+    // ★ [핵심] 클라이언트 상태를 덮어쓰되, 중요한 서버 설정(AI여부 등)은 보존
+    const preservedState = {
+        isVsAI: gameState.isVsAI,
+        aiDifficulty: gameState.aiDifficulty,
+        p1Time: gameState.p1Time, // 시간은 서버 기준
+        p2Time: gameState.p2Time
+    };
+
     let newLastMove = gameState.lastMove;
     let newLastWall = null;
 
@@ -314,10 +318,10 @@ io.on('connection', (socket) => {
     const prevTurn = gameState.turn;
     let winReason = newState.winner ? 'goal' : null;
 
+    // 상태 병합
     gameState = { 
         ...newState, 
-        p1Time: gameState.p1Time, 
-        p2Time: gameState.p2Time, 
+        ...preservedState, // AI 설정 유지!
         lastMove: newLastMove, 
         lastWall: newLastWall,
         winReason: winReason 
@@ -328,7 +332,7 @@ io.on('connection', (socket) => {
 
     io.emit('update_state', gameState);
 
-    // ★ [핵심] 여기서 AI 턴인지 확인하고 실행!
+    // ★ [핵심] AI 턴이면 실행 (이제 isVsAI가 사라지지 않으므로 정상 작동)
     if (gameState.isVsAI && gameState.turn === 2 && !gameState.winner) {
         processAIMove();
     }
@@ -351,7 +355,6 @@ io.on('connection', (socket) => {
     if (gameInterval) clearInterval(gameInterval);
     isGameStarted = false;
     
-    // 역할까지 모두 초기화
     roles = { 1: null, 2: null }; 
     readyStatus = { 1: false, 2: false };
     
@@ -368,12 +371,15 @@ io.on('connection', (socket) => {
       if (isP1) { roles[1]=null; readyStatus[1]=false; }
       if (isP2) { roles[2]=null; readyStatus[2]=false; }
       
-      // AI 모드가 아닐 때, 실제 플레이어가 나가면 게임 종료
+      if (isP1 && roles[2] === 'AI') {
+          roles[2] = null;
+          readyStatus[2] = false;
+      }
+
       if (isGameStarted) {
         if (gameInterval) clearInterval(gameInterval);
         isGameStarted = false;
         io.emit('game_start', false);
-        console.log(`Player disconnected: ${socket.id}. Game reset.`);
       }
       broadcastLobby();
     }

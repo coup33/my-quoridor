@@ -49,7 +49,7 @@ const TimeBar = ({ time, maxTime = 90, left, center, right }) => {
   );
 };
 
-// BFS 로직 (유지)
+// BFS 로직 (클라이언트용)
 const isBlocked = (cx, cy, tx, ty, walls) => {
   if (ty < cy) return walls.some(w => w.orientation === 'h' && w.y === ty && (w.x === cx || w.x === cx - 1));
   if (ty > cy) return walls.some(w => w.orientation === 'h' && w.y === cy && (w.x === cx || w.x === cx - 1));
@@ -198,14 +198,26 @@ function App() {
 
   const emitAction = (newState) => socket.emit('game_action', newState);
   const selectRole = (role) => socket.emit('select_role', role);
-  const toggleReady = () => myRole && socket.emit('player_ready', myRole);
-  const resetGame = () => { setMyRole(null); socket.emit('reset_game'); };
+  
+  const toggleReady = () => {
+    if (myRole) socket.emit('player_ready', myRole);
+  };
+  
+  // ★ [수정] 나가기 시 클라이언트 상태 초기화
+  const resetGame = () => { 
+    setMyRole(null); 
+    setShowMenu(false);
+    socket.emit('reset_game'); 
+  };
+  
   const resignGame = () => { if(window.confirm("정말 기권하시겠습니까?")) socket.emit('resign_game'); };
-  const startAiGame = (difficulty) => { socket.emit('start_ai_game', difficulty); };
+  
+  const startAiGame = (difficulty) => { 
+    socket.emit('start_ai_game', difficulty); 
+  };
 
   const isMyTurn = turn === myRole;
 
-  // 게임 로직 (이동/벽) 함수들 유지...
   const isMoveable = (targetX, targetY) => {
     if (!isGameStarted || !isMyTurn || actionMode !== 'move' || winner) return false;
     const current = turn === 1 ? player1 : player2;
@@ -234,6 +246,7 @@ function App() {
     return !isBlocked(x1, y1, x2, y2, currentWalls);
   };
 
+  // ★ 벽 놓기 시 길 막힘 체크 (BFS)
   const canPlaceWall = (x, y, orientation) => {
     if (!isGameStarted || !isMyTurn || winner) return false;
     const isOverlap = walls.some(w => {
@@ -247,6 +260,7 @@ function App() {
     });
     if (isOverlap) return false;
 
+    // 길 막힘 확인
     const simulatedWalls = [...walls, { x, y, orientation }];
     const p1CanReach = hasPath(player1, 8, simulatedWalls);
     const p2CanReach = hasPath(player2, 0, simulatedWalls);
@@ -336,12 +350,10 @@ function App() {
     <div className="container">
       <div className="game-title">QUORIDOR</div>
 
-      {/* ★ [수정] 메뉴 버튼을 여기로 이동 (타이틀 형제 레벨) */}
       {isGameStarted && !isSpectator && (
         <button className="menu-float" onClick={() => setShowMenu(true)}>MENU</button>
       )}
-
-      {/* ★ [수정] 메뉴 모달도 여기로 이동 */}
+      
       {showMenu && (
           <div className="lobby-overlay" onClick={() => setShowMenu(false)}>
              <div className="lobby-card" onClick={(e) => e.stopPropagation()}>
@@ -467,7 +479,7 @@ function App() {
       </div>
 
       {winner && (
-          <div className="overlay">
+          <div className="overlay" style={{ zIndex: 9999 }}>
             <div className="modal">
               <h2>{resultTitle}</h2>
               {resultDesc && <p style={{marginTop:'5px', color:'#666'}}>{resultDesc}</p>}
