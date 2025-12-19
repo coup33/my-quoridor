@@ -1,4 +1,4 @@
-/* App.css - Quoridor Web Game Style (Final Stacked Layout) */
+/* App.css 전체를 이 코드로 덮어씌워 주세요 (최종 수정본) */
 
 * {
   box-sizing: border-box;
@@ -113,11 +113,11 @@ body {
 .board-section { display: flex; flex-direction: column; align-items: center; justify-content: center; width: auto; height: 100%; }
 .t-white { color: #ced4da; } .t-black { color: #868e96; }
 
-/* 타임 바 컨테이너 & 상단 정보창 */
+/* 타임 바 컨테이너 & 상단 정보창 (PC: 여백 20px 존재) */
 .time-bar-container {
   width: 95%; max-width: 480px;
   margin: 8px 0;
-  margin-top: 20px;
+  margin-top: 20px; /* 이 녀석이 모바일에서도 적용돼서 문제였음 */
 }
 
 .time-info-row {
@@ -184,7 +184,7 @@ body {
 
 /* =================================================
    [📱 모바일 최적화 (가로폭 768px 이하)]
-   ★ 전략: [타이틀(고정)] ... [상대패널-보드(중앙)] ... [내패널(고정)]
+   ★ 여백 제거로 상대정보-턴정보 밀착 ★
    ================================================= */
 @media (max-width: 768px) {
   :root {
@@ -203,81 +203,71 @@ body {
   /* 2. [상단 고정] 타이틀 */
   .game-title {
     position: absolute; 
-    top: 5px; left: 50%; transform: translateX(-50%);
+    top: 0; left: 50%; transform: translateX(-50%);
     width: auto; writing-mode: horizontal-tb; margin: 0;
     font-size: 1.3rem; letter-spacing: 2px;
-    z-index: 100; white-space: nowrap;
+    z-index: 100; white-space: nowrap; padding-top: 5px; 
   }
 
   /* 3. [상단 고정] 메뉴 버튼 */
   .menu-float { 
-    position: absolute; top: 10px; right: 15px; bottom: auto; left: auto;
+    position: absolute; top: 5px; right: 15px; bottom: auto; left: auto;
     padding: 6px 12px; font-size: 0.8rem; z-index: 200;
   }
 
-  /* 4. [하단 고정] 내 패널 (pos-bottom) */
+  /* 4. [하단 고정] 행동 버튼 */
   .side-panel.pos-bottom {
-    position: absolute; 
-    bottom: 80px; /* 엄지손가락 터치하기 좋은 위치 */
+    position: absolute;
+    bottom: 80px; 
     left: 50%; transform: translateX(-50%);
-    
     width: 90%; max-width: 350px; height: 45px;
     margin: 0; padding: 0 15px; z-index: 100;
-    
     display: flex; justify-content: space-between; align-items: center;
     white-space: nowrap; background: #343a40; box-shadow: 0 -2px 10px rgba(0,0,0,0.3);
   }
 
-  /* 5. [중앙 영역] 메인 콘텐츠: 상하 여백 확보 후 중앙 정렬 */
+  /* 5. [중앙 영역] */
   .main-content {
     flex: 1;
-    display: flex;
-    flex-direction: column;
+    display: flex; flex-direction: column;
+    padding-top: 40px; padding-bottom: 140px; 
+    justify-content: center; align-items: center;
     
-    /* 타이틀과 하단 버튼 사이 공간을 사용 */
-    padding-top: 60px; 
-    padding-bottom: 160px; 
-    
-    justify-content: center; 
-    align-items: center;
-    gap: 0; 
+    /* ★ 핵심: 여기 gap을 0으로 만들어 완전히 붙임 */
+    gap: 0px; 
     height: 100%;
   }
 
-  /* 6. [상단 패널] 상대방 정보 (pos-top)
-     ★ 중요: 이제는 절대 위치가 아닙니다. main-content 흐름을 타고 
-     보드판 바로 위에 얹혀집니다. */
+  /* 6. [상단 패널] 상대방 정보 */
   .side-panel.pos-top {
     position: relative;
     width: 75%; max-width: 280px; height: 38px;
     padding: 0 10px;
-    
     display: flex; justify-content: space-between; align-items: center;
     margin: 0 auto;
-    
-    /* ★ 게임판(턴 표시) 바로 위에 붙도록 마진 설정 */
-    margin-bottom: 5px; 
-    
     flex-shrink: 0; white-space: nowrap;
+    
+    /* ★ 마진 0으로 설정하여 아래 턴정보와 밀착 */
+    margin-bottom: 0; 
   }
 
   /* 7. 보드 섹션 */
   .board-section {
-    flex-shrink: 0;
-    margin: 0;
+    flex-shrink: 0; margin: 0;
     display: flex; flex-direction: column;
     justify-content: center; align-items: center;
   }
 
-  /* 타임바 (상대 패널 바로 아래) */
+  /* 8. [타임바 & 턴정보] */
   .time-bar-container { 
     width: 85%; max-width: 300px; 
-    margin-top: 0; /* 위쪽 갭 제거 */
+    /* ★ 중요: PC에서 상속된 20px 여백을 여기서 0으로 강제 제거 */
+    margin-top: 2px !important; 
+    margin-bottom: 2px;
     flex-shrink: 0; 
   }
-  .status-badge { font-size: 0.65rem; padding: 2px 6px; }
   
-  /* 버튼, 텍스트 */
+  .status-badge { font-size: 0.65rem; padding: 2px 6px; }
   .wall-counter { margin: 0; padding: 0; background: transparent; font-size: 0.9rem; }
   .count { display: inline; font-size: 1.1rem; margin-left: 5px; }
   .button-group { display: flex; flex-direction: row; gap: 8px; flex-wrap: nowrap; flex-shrink: 0; }
