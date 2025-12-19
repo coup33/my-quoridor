@@ -7,8 +7,13 @@ const app = express();
 app.use(cors());
 
 const server = http.createServer(app);
+
+// ★ [수정] pingTimeout: 10000 (10초)
+// 10초 동안 응답이 없으면 연결 끊김 처리 (너무 짧으면 튕김, 너무 길면 지루함)
 const io = new Server(server, {
-  cors: { origin: "*", methods: ["GET", "POST"] }
+  cors: { origin: "*", methods: ["GET", "POST"] },
+  pingTimeout: 10000,  // 10초 대기 (이걸 3000으로 줄이면 3초가 됩니다)
+  pingInterval: 5000   // 5초마다 생존 확인 (핑 보내기)
 });
 
 const MAX_TIME = 90; 
@@ -36,7 +41,7 @@ let readyStatus = { 1: false, 2: false };
 let isGameStarted = false;
 let gameInterval = null;
 
-// --- Helper Functions (AI용, 서버 검증용) ---
+// --- Helper Functions ---
 const isBlocked = (cx, cy, tx, ty, walls) => {
   if (ty < cy) return walls.some(w => w.orientation === 'h' && w.y === ty && (w.x === cx || w.x === cx - 1));
   if (ty > cy) return walls.some(w => w.orientation === 'h' && w.y === cy && (w.x === cx || w.x === cx - 1));
@@ -172,7 +177,7 @@ io.on('connection', (socket) => {
 
   socket.on('select_role', (role) => {
     role = parseInt(role);
-    if (role === 0) { // 역할 취소
+    if (role === 0) {
       if (roles[1]===socket.id) { roles[1]=null; readyStatus[1]=false; }
       if (roles[2]===socket.id) { roles[2]=null; readyStatus[2]=false; }
     } else {
@@ -257,14 +262,12 @@ io.on('connection', (socket) => {
     }
   });
 
-  // ★ [수정] 나가기(Reset) 시 역할까지 싹 비워서 로비로 내보냄
   socket.on('reset_game', () => {
-    if (roles[1]!==socket.id && roles[2]!==socket.id) return; // 관전자는 리셋 불가
+    if (roles[1]!==socket.id && roles[2]!==socket.id) return; 
     
     if (gameInterval) clearInterval(gameInterval);
     isGameStarted = false;
     
-    // ★ 여기가 핵심: 게임 중 나가면 모두의 역할을 해제하여 로비 초기 화면으로
     roles = { 1: null, 2: null }; 
     readyStatus = { 1: false, 2: false };
     
@@ -281,10 +284,12 @@ io.on('connection', (socket) => {
       if (isP1) { roles[1]=null; readyStatus[1]=false; }
       if (isP2) { roles[2]=null; readyStatus[2]=false; }
       
+      // AI 모드가 아닐 때, 실제 플레이어가 나가면 게임 종료
       if (isGameStarted) {
         if (gameInterval) clearInterval(gameInterval);
         isGameStarted = false;
         io.emit('game_start', false);
+        console.log(`Player disconnected: ${socket.id}. Game reset.`);
       }
       broadcastLobby();
     }
