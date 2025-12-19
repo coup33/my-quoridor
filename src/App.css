@@ -1,4 +1,4 @@
-/* App.css - Quoridor Web Game Style (Structural Reset) */
+/* App.css - Quoridor Web Game Style (Verified & Optimized) */
 
 * {
   box-sizing: border-box;
@@ -19,11 +19,13 @@
   --wall-long: calc(var(--cell) * 2 + var(--gap));
 }
 
-/* [노트북 대응] */
+/* [노트북 등 중간 화면 대응] */
 @media (max-height: 900px) and (min-width: 769px) {
   :root { --cell: 42px; --gap: 6px; --pawn: 30px; --wall-thick: 8px; }
   .game-title { font-size: 2rem !important; left: 10px !important; }
   .time-bar-wrapper { margin-top: 30px !important; margin-bottom: 4px !important; height: 20px !important; }
+  .status-badge { top: -25px !important; font-size: 0.7rem !important; }
+  .turn-display { font-size: 1rem !important; margin-bottom: 2px !important; }
   .side-panel { width: 140px !important; padding: 10px !important; }
   .count { font-size: 1.2rem !important; }
   .btn { padding: 8px !important; font-size: 0.9rem !important; }
@@ -47,7 +49,9 @@ body {
   position: relative;
 }
 
-/* --- PC 전용 스타일 --- */
+/* =========================================
+   [PC 전용 스타일] 
+   ========================================= */
 .game-title {
   font-weight: 800;
   letter-spacing: 5px;
@@ -89,7 +93,7 @@ body {
   padding: 10px 0;
 }
 
-/* 플레이어 패널 (PC) */
+/* PC 패널 스타일 */
 .side-panel {
   width: 160px;
   padding: 15px;
@@ -107,11 +111,11 @@ body {
 .btn.selected { background: #fcc419; color: black; }
 .btn:disabled { opacity: 0.3; cursor: not-allowed; }
 
-/* 보드 섹션 (PC) */
+/* PC 보드 섹션 */
 .board-section { display: flex; flex-direction: column; align-items: center; justify-content: center; width: auto; height: 100%; }
 .t-white { color: #ced4da; } .t-black { color: #868e96; }
 
-/* 타임 바 컨테이너 & 상단 정보창 */
+/* PC 타임바 */
 .time-bar-container {
   width: 95%; max-width: 480px;
   margin: 8px 0;
@@ -156,7 +160,7 @@ body {
 
 @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.7; } 100% { opacity: 1; } }
 
-/* 보드 (PC) */
+/* PC 보드판 */
 .board-container { padding: 10px; background: #181a1b; border-radius: 8px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); flex-shrink: 0; }
 .board { position: relative; display: grid; grid-template-columns: repeat(9, var(--cell)); grid-template-rows: repeat(9, var(--cell)); gap: var(--gap); transition: transform 0.5s ease; }
 .cell { width: var(--cell); height: var(--cell); background: #495057; border-radius: 2px; display: flex; justify-content: center; align-items: center; cursor: pointer; }
@@ -182,6 +186,7 @@ body {
 
 /* =================================================
    [📱 모바일 최적화 (가로폭 768px 이하)]
+   ★ 전략: [상단/하단 고정] + [중앙 밀집 그룹핑]
    ================================================= */
 @media (max-width: 768px) {
   :root {
@@ -191,16 +196,16 @@ body {
     --wall-thick: 1.0vmin;
   }
 
-  /* 1. 컨테이너 */
+  /* 1. 컨테이너: 상단 정렬 */
   .container {
     justify-content: flex-start;
     padding-top: 0;
   }
 
-  /* 2. [상단 고정] 타이틀 */
+  /* 2. [상단 고정] 타이틀 (위로 바짝 붙임) */
   .game-title {
     position: absolute; 
-    top: 5px; 
+    top: 0; /* ★ 수정: 0px로 완전 밀착 */
     left: 50%;
     transform: translateX(-50%);
     width: auto;
@@ -210,12 +215,15 @@ body {
     letter-spacing: 2px;
     z-index: 100;
     white-space: nowrap;
+    
+    /* 약간의 패딩을 주어 너무 답답하지 않게 */
+    padding-top: 5px; 
   }
 
   /* 3. [상단 고정] 메뉴 버튼 */
   .menu-float { 
     position: absolute;
-    top: 8px; 
+    top: 5px; 
     right: 15px;
     bottom: auto; left: auto;
     padding: 6px 12px; 
@@ -223,10 +231,10 @@ body {
     z-index: 200;
   }
 
-  /* 4. [하단 고정] 행동 버튼 뭉치 (내 패널) */
+  /* 4. [하단 고정] 행동 버튼 뭉치 (바닥에서 띄움) */
   .side-panel.pos-bottom {
     position: absolute;
-    bottom: 60px; /* 바닥에서 띄움 */
+    bottom: 80px; /* ★ 수정: 60px -> 80px로 더 올림 */
     left: 50%;
     transform: translateX(-50%);
     
@@ -246,19 +254,20 @@ body {
     box-shadow: 0 -2px 10px rgba(0,0,0,0.3);
   }
 
-  /* 5. [중앙 영역] 메인 콘텐츠: 중앙 밀집 대형 */
+  /* 5. [중앙 영역] 메인 콘텐츠: 중앙 밀집 */
   .main-content {
     flex: 1;
     display: flex;
     flex-direction: column;
     
-    /* 상단 타이틀, 하단 패널 공간 확보 후 중앙 정렬 */
-    padding-top: 50px; 
-    padding-bottom: 120px; 
+    /* 타이틀 영역(약 40px) + 하단 버튼 영역(약 125px 이상) 확보 */
+    padding-top: 40px; 
+    padding-bottom: 140px; 
     
-    justify-content: center; /* 세로 중앙 정렬 */
-    align-items: center;     /* 가로 중앙 정렬 */
-    gap: 4px; /* ★ 상대 패널과 보드를 찰싹 붙임 */
+    /* ★ 핵심: 중앙으로 모으고, 요소 간 간격을 좁게 유지 */
+    justify-content: center; 
+    align-items: center;
+    gap: 15px; /* 상대 패널과 보드 사이 거리 */
     height: 100%;
   }
 
@@ -274,10 +283,11 @@ body {
     justify-content: space-between;
     align-items: center;
     margin: 0 auto;
+    
     flex-shrink: 0;
     white-space: nowrap;
     
-    /* 아래쪽 마진을 없애서 보드와 붙게 함 */
+    /* 보드 위쪽에 붙어있게 함 */
     margin-bottom: 0;
   }
 
@@ -294,10 +304,9 @@ body {
   /* 타임바 */
   .turn-display { margin-bottom: 2px; font-size: 0.9rem; flex-shrink: 0; }
   
-  /* 타임바 상단 마진을 줄여서 상대 패널과 밀착 */
   .time-bar-container { 
     width: 85%; max-width: 300px; 
-    margin-top: 2px; /* 아주 좁게 */
+    margin-top: 5px; 
     flex-shrink: 0; 
   }
   .status-badge { font-size: 0.65rem; padding: 2px 6px; }
