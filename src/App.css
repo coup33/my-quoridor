@@ -1,4 +1,4 @@
-/* App.css - Standard Stable Layout (Clean Reset) */
+/* App.css - Final Polish (Increased Board Size) */
 
 * {
   box-sizing: border-box;
@@ -156,52 +156,52 @@ body {
 
 /* =================================================
    [📱 모바일 최적화 (가로폭 768px 이하)]
-   ★ 로비 정상화 및 순차적 배치 (Standard Layout) ★
+   ★ 보드 크기 확대 및 안정적인 스택 레이아웃 ★
    ================================================= */
 @media (max-width: 768px) {
   :root {
-    /* 보드 크기: 작지도 크지도 않은 적당한 사이즈 */
-    --cell: 5.5vmin; 
+    /* 보드 크기 확대: 5.5vmin -> 6.4vmin */
+    --cell: 6.4vmin; 
     --gap: 1vmin;
-    --pawn: 4.0vmin;
+    /* 말 크기도 비율에 맞춰 약간 확대 */
+    --pawn: 4.5vmin; 
     --wall-thick: 1.0vmin;
   }
 
-  /* 1. 컨테이너: 중앙 정렬 (로비 복구) */
+  /* 1. 컨테이너 */
   .container {
-    justify-content: center; /* 로비 때문에 중앙 정렬 필요 */
+    justify-content: center;
     padding-top: 0;
   }
 
-  /* 2. 타이틀: 흐름 내 배치 (absolute 제거) */
+  /* 2. 타이틀 */
   .game-title {
     position: relative;
     top: auto; left: auto; transform: none; writing-mode: horizontal-tb;
     width: 100%; text-align: center;
-    margin: 5px 0; /* 위아래 여백 */
+    margin: 5px 0;
     font-size: 1.5rem; letter-spacing: 2px;
     z-index: 50;
   }
 
-  /* 3. 메뉴 버튼: 우측 상단 고정 */
+  /* 3. 메뉴 버튼 */
   .menu-float { 
     position: absolute;
     top: 10px; right: 15px; bottom: auto; left: auto;
     padding: 6px 12px; font-size: 0.8rem; z-index: 200;
   }
 
-  /* 4. 메인 콘텐츠: 위에서 아래로 순서대로 쌓음 */
+  /* 4. 메인 콘텐츠 (순서대로 쌓기) */
   .main-content {
     flex: 1;
     display: flex; flex-direction: column;
-    justify-content: center; /* 내용물 중앙 정렬 */
-    align-items: center;
-    gap: 10px; /* 요소 간 간격 */
+    justify-content: center; align-items: center;
+    gap: 10px;
     padding: 10px 0;
     height: auto;
   }
 
-  /* 5. 패널 공통 (상대/나 모두) */
+  /* 5. 패널 공통 */
   .side-panel {
     width: 90%; max-width: 320px; height: 40px;
     padding: 0 10px;
@@ -221,7 +221,7 @@ body {
   /* 타임바 & 턴 정보 */
   .time-bar-container { 
     width: 90%; max-width: 320px; 
-    margin-top: 5px; /* PC의 20px 무시 */
+    margin-top: 5px;
     margin-bottom: 5px;
     flex-shrink: 0; 
   }
