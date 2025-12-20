@@ -28,3 +28,6 @@
 @import './desktop.css';
 @import './laptop.css';
 @import './mobile.css';
+
+/* 3D 모드 레이아웃 */
+@import './3d-layout.css';

@@ -31,8 +31,14 @@ export const useGameState = (myRole) => {
     const [lastWall, setLastWall] = useState(null);
 
     // UI 상태
-    const [actionMode, setActionMode] = useState(null);
+    const [actionMode, setActionModeInternal] = useState(null);
     const [previewWall, setPreviewWall] = useState(null);
+
+    // 액션 모드 변경 시 프리뷰 초기화
+    const setActionMode = useCallback((mode) => {
+        setActionModeInternal(mode);
+        setPreviewWall(null);
+    }, []);
 
     // 이전 상태 추적 (사운드 재생용)
     const prevStateRef = useRef(INITIAL_STATE);
@@ -92,9 +98,18 @@ export const useGameState = (myRole) => {
      */
     const resetState = useCallback(() => {
         prevStateRef.current = JSON.parse(JSON.stringify(INITIAL_STATE));
+
+        // 모든 상태 완전 초기화
+        setPlayer1(INITIAL_STATE.p1);
+        setPlayer2(INITIAL_STATE.p2);
+        setTurn(INITIAL_STATE.turn);
+        setWalls(INITIAL_STATE.walls);
+        setWinner(INITIAL_STATE.winner);
+        setWinReason(INITIAL_STATE.winReason);
+        setP1Time(INITIAL_STATE.p1Time);
+        setP2Time(INITIAL_STATE.p2Time);
         setLastMove(null);
         setLastWall(null);
-        setWinner(null);
         setPreviewWall(null);
         setActionMode(null);
     }, []);

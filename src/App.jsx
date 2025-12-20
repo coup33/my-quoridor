@@ -3,25 +3,28 @@
  * 리팩토링된 버전 - 모듈화된 컴포넌트와 훅 사용
  */
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 
 // 스타일
 import './styles/index.css';
 
 // 컴포넌트
-import { Board } from './components/Board';
+import { Board, Board3D } from './components/Board';
 import { TimeBar, TurnIndicator, SidePanel, GameTitle } from './components/UI';
 import { LobbyOverlay } from './components/Lobby';
-import { GameOverModal, MenuModal } from './components/Modal';
+import { GameOverModal, MenuModal, ResignConfirmModal } from './components/Modal';
 
 // 훅
 import { useSocket } from './hooks/useSocket';
 import { useGameState } from './hooks/useGameState';
 import { useSound } from './hooks/useSound';
+import { useGameHandlers } from './hooks/useGameHandlers';
 
 // 유틸리티
-import { isMoveable as checkIsMoveable, canPlaceWall } from './utils/gameLogic';
-import { INITIAL_STATE, ACTION_MODES } from './utils/constants';
+import { ACTION_MODES } from './utils/constants';
+
+// 3D 모드 상태
+const USE_3D_BOARD = true;
 
 function App() {
   // 로비 상태
@@ -30,6 +33,23 @@ function App() {
   const [readyStatus, setReadyStatus] = useState({ 1: false, 2: false });
   const [isGameStarted, setIsGameStarted] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
+  const [showResignConfirm, setShowResignConfirm] = useState(false);
+
+  // 모바일 레이아웃 감지
+  const [isMobileLayout, setIsMobileLayout] = useState(false);
+
+  useEffect(() => {
+    const checkMobileLayout = () => {
+      const boardSize = Math.min(window.innerWidth, window.innerHeight);
+      const leftPanelLeft = window.innerWidth / 2 - boardSize / 2 - 100;
+      const titleRight = 80;
+      setIsMobileLayout(leftPanelLeft < titleRight);
+    };
+
+    checkMobileLayout();
+    window.addEventListener('resize', checkMobileLayout);
+    return () => window.removeEventListener('resize', checkMobileLayout);
+  }, []);
 
   // 게임 상태 훅
   const gameState = useGameState(myRole);
@@ -50,7 +70,6 @@ function App() {
       setReadyStatus(data.readyStatus);
       setIsGameStarted(data.isGameStarted);
 
-      // 역할 설정
       if (data.roles[1] !== socketId && data.roles[2] !== socketId) {
         setMyRole(null);
       } else {
@@ -65,6 +84,7 @@ function App() {
         resetState();
         setShowMenu(false);
       } else {
+        resetState();
         setShowMenu(false);
       }
     },
@@ -87,119 +107,33 @@ function App() {
   const isFlipped = myRole === 1;
   const topTime = isFlipped ? p2Time : p1Time;
   const bottomTime = isFlipped ? p1Time : p2Time;
-
   const currentPlayer = turn === 1 ? player1 : player2;
-  const opponentPlayer = turn === 1 ? player2 : player1;
 
-  // 이동 가능 여부 체크
-  const isMoveableCheck = useCallback((targetX, targetY) => {
-    if (!isGameStarted || !isMyTurn || actionMode !== ACTION_MODES.MOVE || winner) {
-      return false;
-    }
-    return checkIsMoveable(targetX, targetY, currentPlayer, opponentPlayer, walls);
-  }, [isGameStarted, isMyTurn, actionMode, winner, currentPlayer, opponentPlayer, walls]);
-
-  // 벽 설치 가능 여부 체크
-  const canPlaceWallCheck = useCallback((x, y, orientation) => {
-    if (!isGameStarted || !isMyTurn || winner) return false;
-    return canPlaceWall(x, y, orientation, walls, player1, player2);
-  }, [isGameStarted, isMyTurn, winner, walls, player1, player2]);
-
-  // 셀 클릭 핸들러
-  const handleCellClick = useCallback((x, y) => {
-    setPreviewWall(null);
-    if (!isMyTurn) return;
-    if (!isMoveableCheck(x, y)) return;
-
-    let nextState = {
-      p1: player1,
-      p2: player2,
-      turn: turn === 1 ? 2 : 1,
-      walls,
-      winner: null
-    };
-
-    if (turn === 1) {
-      nextState.p1 = { ...player1, x, y };
-      if (nextState.p1.y === 8) {
-        nextState.winner = 1;
-        nextState.winReason = 'goal';
-      }
-    } else {
-      nextState.p2 = { ...player2, x, y };
-      if (nextState.p2.y === 0) {
-        nextState.winner = 2;
-        nextState.winReason = 'goal';
-      }
-    }
-
-    emitAction(nextState);
-  }, [isMyTurn, isMoveableCheck, player1, player2, turn, walls, emitAction, setPreviewWall]);
-
-  // 벽 클릭 핸들러
-  const handleWallClick = useCallback((x, y, orientation) => {
-    if (!isMyTurn || actionMode !== ACTION_MODES.WALL) return;
-
-    if (currentPlayer.wallCount <= 0) return;
-
-    if (!canPlaceWallCheck(x, y, orientation)) {
-      setPreviewWall(null);
-      return;
-    }
-
-    // 같은 위치 클릭 시 설치
-    if (previewWall?.x === x && previewWall?.y === y && previewWall?.orientation === orientation) {
-      const nextWalls = [...walls, { x, y, orientation }];
-      const nextState = {
-        p1: turn === 1 ? { ...player1, wallCount: player1.wallCount - 1 } : player1,
-        p2: turn === 2 ? { ...player2, wallCount: player2.wallCount - 1 } : player2,
-        turn: turn === 1 ? 2 : 1,
-        walls: nextWalls,
-        winner: null
-      };
-      emitAction(nextState);
-      setPreviewWall(null);
-    } else {
-      // 프리뷰 표시
-      setPreviewWall({ x, y, orientation });
-    }
-  }, [isMyTurn, actionMode, currentPlayer.wallCount, canPlaceWallCheck, previewWall, walls, turn, player1, player2, emitAction, setPreviewWall]);
-
-  // 역할 선택
-  const handleSelectRole = useCallback((role) => {
-    socketSelectRole(role);
-  }, [socketSelectRole]);
-
-  // 준비 토글
-  const handleToggleReady = useCallback(() => {
-    if (myRole) {
-      socketToggleReady(myRole);
-    }
-  }, [myRole, socketToggleReady]);
-
-  // 게임 리셋
-  const handleResetGame = useCallback(() => {
-    setMyRole(null);
-    setShowMenu(false);
-    socketResetGame();
-  }, [socketResetGame]);
-
-  // 기권
-  const handleResignGame = useCallback(() => {
-    if (window.confirm('정말 기권하시겠습니까?')) {
-      socketResignGame();
-    }
-  }, [socketResignGame]);
-
-  // AI 게임 시작
-  const handleStartAiGame = useCallback((difficulty) => {
-    socketStartAiGame(difficulty);
-  }, [socketStartAiGame]);
-
-  // 역할 나가기 (로비에서)
-  const handleLeaveRole = useCallback(() => {
-    socketSelectRole(0);
-  }, [socketSelectRole]);
+  // 게임 핸들러 훅
+  const {
+    isMoveableCheck,
+    canPlaceWallCheck,
+    handleCellClick,
+    handleWallClick,
+    handleSelectRole,
+    handleToggleReady,
+    handleStartAiGame,
+    handleLeaveRole,
+    handleResetGame,
+    openResignConfirm,
+    confirmResign,
+    cancelResign
+  } = useGameHandlers({
+    // 게임 상태
+    player1, player2, turn, walls, winner, isMyTurn, actionMode, previewWall,
+    currentPlayer,
+    opponentPlayer: turn === 1 ? player2 : player1,
+    isGameStarted, myRole,
+    // 상태 업데이트 함수
+    setPreviewWall, setActionMode, setMyRole, setShowMenu, setShowResignConfirm,
+    // 소켓 함수
+    emitAction, socketSelectRole, socketToggleReady, socketResetGame, socketResignGame, socketStartAiGame
+  });
 
   // 상단 배지
   const topBadge = useMemo(() => {
@@ -214,11 +148,11 @@ function App() {
   const resignButton = useMemo(() => {
     if (isSpectator || winner || !isGameStarted) return null;
     return (
-      <button className="status-badge badge-resign" onClick={handleResignGame}>
+      <button className="status-badge badge-resign" onClick={openResignConfirm}>
         항복
       </button>
     );
-  }, [isSpectator, winner, isGameStarted, handleResignGame]);
+  }, [isSpectator, winner, isGameStarted, openResignConfirm]);
 
   // 턴 표시
   const turnIndicator = (
@@ -231,7 +165,7 @@ function App() {
   );
 
   return (
-    <div className="container">
+    <div className={`container ${isMobileLayout ? 'mobile-mode' : 'desktop-mode'}`}>
       <GameTitle />
 
       {/* 메뉴 버튼 */}
@@ -264,63 +198,204 @@ function App() {
 
       {/* 게임 영역 */}
       <div className={`game-wrapper ${!isGameStarted || winner ? 'blurred' : ''}`}>
-        <main className="main-content">
-          {/* 플레이어 1 패널 */}
-          <SidePanel
-            player={player1}
-            playerNumber={1}
-            isActive={turn === 1}
-            isMyRole={myRole === 1}
-            isMyTurn={isMyTurn && turn === 1}
-            winner={winner}
-            actionMode={actionMode}
-            onActionModeChange={setActionMode}
-            style={{ order: isFlipped ? 3 : 1 }}
-          />
+        {USE_3D_BOARD ? (
+          /* 3D 모드 */
+          <main className={`main-content-3d ${isMobileLayout ? 'mobile-mode' : 'desktop-mode'}`}>
+            {/* 3D 보드 컨테이너 */}
+            <div className="board-fullscreen-3d">
+              {/* 상단 타임바 영역 (모바일) */}
+              <div className="mobile-top-bar">
+                <div className={`mobile-opponent-info ${turn !== myRole ? 'active' : ''}`}>
+                  {myRole ? (
+                    <>
+                      <span className="player-icon">{myRole === 1 ? '⬛' : '⬜'}</span>
+                      <span className="player-walls">{myRole === 1 ? player2.wallCount : player1.wallCount}개</span>
+                    </>
+                  ) : (
+                    <>
+                      <span className="player-icon">⬛</span>
+                      <span className="player-walls">{player2.wallCount}개</span>
+                    </>
+                  )}
+                </div>
+                <div className="mobile-timebar-area">
+                  <div className="floating-turn-indicator">{turnIndicator}</div>
+                  <TimeBar time={topTime} />
+                </div>
+              </div>
 
-          {/* 보드 섹션 */}
-          <section className="board-section" style={{ order: 2 }}>
-            <TimeBar
-              time={topTime}
-              left={topBadge}
-              center={turnIndicator}
-              right={resignButton}
-            />
+              {/* 3D 보드 */}
+              <div className="board-3d-inner">
+                <Board3D
+                  player1={player1}
+                  player2={player2}
+                  walls={walls}
+                  lastWall={lastWall}
+                  isFlipped={isFlipped}
+                  isMyTurn={isMyTurn}
+                  actionMode={actionMode}
+                  previewWall={previewWall}
+                  onCellClick={handleCellClick}
+                  onWallClick={handleWallClick}
+                  isMoveableCheck={isMoveableCheck}
+                  canPlaceWallCheck={canPlaceWallCheck}
+                />
+              </div>
 
-            <div className="board-container">
-              <Board
-                player1={player1}
-                player2={player2}
-                walls={walls}
-                lastMove={lastMove}
-                lastWall={lastWall}
-                isFlipped={isFlipped}
-                isMyTurn={isMyTurn}
-                actionMode={actionMode}
-                previewWall={previewWall}
-                onCellClick={handleCellClick}
-                onWallClick={handleWallClick}
-                isMoveableCheck={isMoveableCheck}
-                canPlaceWallCheck={canPlaceWallCheck}
-              />
+              {/* 하단 타임바 영역 (모바일) */}
+              <div className="mobile-bottom-bar">
+                <TimeBar time={bottomTime} />
+                <div className="mobile-my-controls">
+                  <div className={`mobile-my-info ${turn === myRole ? 'active' : ''}`}>
+                    {myRole ? (
+                      <>
+                        <span className="player-icon">{myRole === 1 ? '⬜' : '⬛'}</span>
+                        <span className="player-walls">{myRole === 1 ? player1.wallCount : player2.wallCount}개</span>
+                      </>
+                    ) : (
+                      <>
+                        <span className="player-icon">⬜</span>
+                        <span className="player-walls">{player1.wallCount}개</span>
+                      </>
+                    )}
+                  </div>
+                  {myRole && (
+                    <div className="mobile-action-buttons">
+                      <button
+                        className={`floating-action-btn ${actionMode === ACTION_MODES.MOVE ? 'active' : ''}`}
+                        onClick={() => setActionMode(ACTION_MODES.MOVE)}
+                        disabled={!isMyTurn || winner}
+                      >
+                        이동
+                      </button>
+                      <button
+                        className={`floating-action-btn ${actionMode === ACTION_MODES.WALL ? 'active' : ''}`}
+                        onClick={() => setActionMode(ACTION_MODES.WALL)}
+                        disabled={!isMyTurn || winner || currentPlayer.wallCount <= 0}
+                      >
+                        벽
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
 
-            <TimeBar time={bottomTime} />
-          </section>
+            {/* 플로팅 UI - 좌측 (데스크탑) */}
+            <div className="floating-panel floating-left desktop-only">
+              {myRole ? (
+                <div className={`floating-player-info ${turn !== myRole ? 'active' : ''}`}>
+                  <span className="player-icon">{myRole === 1 ? '⬛' : '⬜'}</span>
+                  <span className="player-walls">{myRole === 1 ? player2.wallCount : player1.wallCount}개</span>
+                </div>
+              ) : (
+                <div className={`floating-player-info ${turn === 2 ? 'active' : ''}`}>
+                  <span className="player-icon">⬛</span>
+                  <span className="player-walls">{player2.wallCount}개</span>
+                </div>
+              )}
+            </div>
 
-          {/* 플레이어 2 패널 */}
-          <SidePanel
-            player={player2}
-            playerNumber={2}
-            isActive={turn === 2}
-            isMyRole={myRole === 2}
-            isMyTurn={isMyTurn && turn === 2}
-            winner={winner}
-            actionMode={actionMode}
-            onActionModeChange={setActionMode}
-            style={{ order: isFlipped ? 1 : 3 }}
-          />
-        </main>
+            {/* 플로팅 UI - 상단 (데스크탑) */}
+            <div className="floating-timebar-top desktop-only">
+              <div className="floating-turn-indicator">{turnIndicator}</div>
+              <TimeBar time={topTime} />
+            </div>
+
+            {/* 플로팅 UI - 하단 (데스크탑) */}
+            <div className="floating-timebar-bottom desktop-only">
+              <TimeBar time={bottomTime} />
+            </div>
+
+            {/* 플로팅 UI - 우측 (데스크탑) */}
+            <div className="floating-panel floating-right desktop-only">
+              {myRole ? (
+                <>
+                  <div className={`floating-player-info my-info ${turn === myRole ? 'active' : ''}`}>
+                    <span className="player-icon">{myRole === 1 ? '⬜' : '⬛'}</span>
+                    <span className="player-walls">{myRole === 1 ? player1.wallCount : player2.wallCount}개</span>
+                  </div>
+                  <div className="floating-action-row">
+                    <button
+                      className={`floating-action-btn ${actionMode === ACTION_MODES.MOVE ? 'active' : ''}`}
+                      onClick={() => setActionMode(ACTION_MODES.MOVE)}
+                      disabled={!isMyTurn || winner}
+                    >
+                      이동
+                    </button>
+                    <button
+                      className={`floating-action-btn ${actionMode === ACTION_MODES.WALL ? 'active' : ''}`}
+                      onClick={() => setActionMode(ACTION_MODES.WALL)}
+                      disabled={!isMyTurn || winner || currentPlayer.wallCount <= 0}
+                    >
+                      벽
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <div className={`floating-player-info ${turn === 1 ? 'active' : ''}`}>
+                  <span className="player-icon">⬜</span>
+                  <span className="player-walls">{player1.wallCount}개</span>
+                </div>
+              )}
+            </div>
+
+            {/* 플로팅 UI - 좌측 하단 배지 */}
+            <div className="floating-panel floating-bottom-left-badge">
+              {topBadge}
+              {resignButton}
+            </div>
+          </main>
+        ) : (
+          /* 2D 모드 */
+          <main className="main-content">
+            <SidePanel
+              player={player1}
+              playerNumber={1}
+              isActive={turn === 1}
+              isMyRole={myRole === 1}
+              isMyTurn={isMyTurn && turn === 1}
+              winner={winner}
+              actionMode={actionMode}
+              onActionModeChange={setActionMode}
+              style={{ order: isFlipped ? 3 : 1 }}
+            />
+
+            <section className="board-section" style={{ order: 2 }}>
+              <TimeBar time={topTime} left={topBadge} center={turnIndicator} right={resignButton} />
+              <div className="board-container">
+                <Board
+                  player1={player1}
+                  player2={player2}
+                  walls={walls}
+                  lastMove={lastMove}
+                  lastWall={lastWall}
+                  isFlipped={isFlipped}
+                  isMyTurn={isMyTurn}
+                  actionMode={actionMode}
+                  previewWall={previewWall}
+                  onCellClick={handleCellClick}
+                  onWallClick={handleWallClick}
+                  isMoveableCheck={isMoveableCheck}
+                  canPlaceWallCheck={canPlaceWallCheck}
+                />
+              </div>
+              <TimeBar time={bottomTime} />
+            </section>
+
+            <SidePanel
+              player={player2}
+              playerNumber={2}
+              isActive={turn === 2}
+              isMyRole={myRole === 2}
+              isMyTurn={isMyTurn && turn === 2}
+              winner={winner}
+              actionMode={actionMode}
+              onActionModeChange={setActionMode}
+              style={{ order: isFlipped ? 1 : 3 }}
+            />
+          </main>
+        )}
       </div>
 
       {/* 게임 종료 모달 */}
@@ -331,6 +406,14 @@ function App() {
           myRole={myRole}
           isSpectator={isSpectator}
           onReturnToLobby={handleResetGame}
+        />
+      )}
+
+      {/* 항복 확인 모달 */}
+      {showResignConfirm && (
+        <ResignConfirmModal
+          onConfirm={confirmResign}
+          onCancel={cancelResign}
         />
       )}
     </div>
